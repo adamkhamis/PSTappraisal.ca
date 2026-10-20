@@ -13,5 +13,5 @@ for (const name of PAGES) {
     .replace(/(href|src)="\/(?!\/)([^"#?]*)/g, (m, attr, p) => `${attr}="${p === '' ? 'index.html' : /\.\w+$/.test(p) ? p : p + '.html'}`);
   fs.writeFileSync(path.join(out, `${name}.html`), preview ? html.replace('<body>', '<body>' + BANNER) : html);
 }
-for (const f of ['style.css', 'site.js', 'calc.js', 'start.js', 'thank-you.js']) fs.copyFileSync(path.join(__dirname, '..', 'public', f), path.join(out, f));
+for (const f of ['style.css', 'site.js', 'calc.js', 'start.js', 'thank-you.js', 'lien.js', 'bill-of-sale.js']) fs.copyFileSync(path.join(__dirname, '..', 'public', f), path.join(out, f));
 console.log(`Wrote ${PAGES.length} pages to ${out}`);

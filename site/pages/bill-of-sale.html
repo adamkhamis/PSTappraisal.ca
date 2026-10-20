@@ -1,0 +1,45 @@
+<!--meta {"title":"Free Vehicle Bill of Sale Template for BC | PST Appraisal BC","description":"Fill in a free bill of sale for a private vehicle sale in British Columbia and print it.","nav":"tools","scripts":["/bill-of-sale.js"]} -->
+<section class="page-hero slim no-print">
+  <div class="wrap narrow">
+    <p class="eyebrow dark"><a href="/tools">Tools</a> / Bill of sale</p>
+    <h1>Vehicle bill of sale</h1>
+    <p class="lead">Fill it in here, print two copies, and both sign. Nothing you type is sent to us.</p>
+  </div>
+</section>
+<section class="section form-section">
+  <div class="wrap narrow">
+    <form class="bos" id="bos" onsubmit="return false">
+      <h2 class="bos-title">Bill of Sale: Motor Vehicle</h2>
+      <p class="bos-sub">Private sale in British Columbia</p>
+      <fieldset><legend>Seller</legend><div class="grid">
+        <label>Full name<input name="seller_name"></label><label>Phone<input name="seller_phone"></label>
+        <label class="span2">Address<input name="seller_address"></label>
+      </div></fieldset>
+      <fieldset><legend>Buyer</legend><div class="grid">
+        <label>Full name<input name="buyer_name"></label><label>Phone<input name="buyer_phone"></label>
+        <label class="span2">Address<input name="buyer_address"></label>
+      </div></fieldset>
+      <fieldset><legend>Vehicle</legend><div class="grid">
+        <label>Year<input name="year"></label><label>Make<input name="make"></label>
+        <label>Model<input name="model"></label><label>Colour<input name="colour"></label>
+        <label class="span2">VIN<input name="vin" maxlength="17" class="upper"></label>
+        <label>Odometer reading<input name="odometer"></label><label>Plate number<input name="plate"></label>
+      </div></fieldset>
+      <fieldset><legend>Sale</legend><div class="grid">
+        <label>Purchase price ($)<input name="price"></label><label>Date of sale<input name="date" type="date"></label>
+        <label class="span2">Payment method<input name="payment" placeholder="e.g. bank draft, e-transfer, cash"></label>
+      </div></fieldset>
+      <fieldset><legend>Terms</legend>
+        <p class="bos-terms">The seller confirms they are the legal owner of the vehicle described above, have the right to sell it, and that it is free of all liens and debts except as listed here: <input name="liens" class="inline-in" placeholder="none"></p>
+        <p class="bos-terms">The vehicle is sold <b>as is</b>. The seller has disclosed the following known problems: <input name="defects" class="inline-in wide-in" placeholder="none"></p>
+        <p class="bos-terms">The buyer confirms they have received the vehicle and paid the price above in full.</p>
+      </fieldset>
+      <div class="sign-grid">
+        <div><span class="sig-line"></span>Seller's signature</div><div><span class="sig-line"></span>Date</div>
+        <div><span class="sig-line"></span>Buyer's signature</div><div><span class="sig-line"></span>Date</div>
+      </div>
+      <div class="row-btns no-print"><button class="btn" type="button" id="print-bos">Print bill of sale</button><button class="btn outline" type="reset">Clear</button></div>
+      <p class="fine no-print">A general template, not legal advice. Keep a signed copy each.</p>
+    </form>
+  </div>
+</section>

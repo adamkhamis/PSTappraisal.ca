@@ -15,7 +15,7 @@ function renderPage(name, vars) {
   const all = { title: 'PST Appraisal BC', description: '', ...meta, scripts, today: new Date().toLocaleDateString('en-CA', { year: 'numeric', month: 'long', day: 'numeric' }), ...vars };
   const fill = (t) => t.replace(/\{\{(\w+)\}\}/g, (_, k) => all[k] ?? '');
   return fill(fill(html)) // twice, so values like the meta description can use {{price}}
-    .replace(`data-nav="${name}"`, `data-nav="${name}" aria-current="page"`);
+    .replace(`data-nav="${meta.nav || name}"`, `data-nav="${meta.nav || name}" aria-current="page"`);
 }
 
 const PAGES = fs.readdirSync(path.join(SITE, 'pages')).map((f) => f.replace(/\.html$/, ''));
