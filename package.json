@@ -5,7 +5,8 @@
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
-    "fields": "node --no-warnings src/list-fields.js"
+    "fields": "node --no-warnings src/list-fields.js",
+    "build:preview": "node src/export-static.js docs --preview"
   },
   "keywords": [],
   "author": "",

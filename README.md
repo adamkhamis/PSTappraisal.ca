@@ -30,6 +30,9 @@ BC's appraisal form is **FIN 320, Motor Vehicle Appraisal** (gov.bc.ca → Taxes
 
 After that, every approval attaches the filled FIN 320 as well as the branded certificate. If the form needs a handwritten signature, put a PNG of your signature at `SIGNATURE_IMAGE`.
 
+## Preview on GitHub Pages
+The `docs/` folder is a static copy of the public pages for previewing. Turn it on in GitHub under **Settings → Pages → Deploy from a branch → main / docs**. Rebuild it after changing pages with `npm run build:preview`. Ordering and the contact form only work on the full site.
+
 ## Going live
 - **CanSpace (cPanel):** follow [DEPLOY-CANSPACE.md](DEPLOY-CANSPACE.md).
 - Any other Node 18+ host works too. Keep `data/` and `uploads/` on a persistent disk, set `BASE_URL` to your real domain, and use HTTPS.
