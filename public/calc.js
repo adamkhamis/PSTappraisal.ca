@@ -18,10 +18,10 @@
     const form = box.closest('form') || box;
     const get = (n) => parseFloat((form.querySelector(`[name="${n}"]`) || {}).value) || 0;
     const out = box.querySelector('[data-calc-out]');
-    const fee = parseFloat(document.body.dataset.fee) || 0;
     const detailed = box.dataset.calc === 'full';
 
     function update() {
+      const fee = parseFloat(document.body.dataset.fee) || 0;
       const bb = get(box.dataset.bb || 'black_book'), pp = get(box.dataset.pp || 'purchase_price'), ap = get('appraised');
       if (!bb || !pp) { out.innerHTML = `<p class="calc-empty">${box.dataset.empty || 'Enter the Black Book value and what you paid to see your saving.'}</p>`; return; }
       if (pp >= bb) { out.innerHTML = `<p class="calc-empty">You paid the Black Book value or more, so PST is already charged on your purchase price. An appraisal won't lower it.</p>`; return; }
