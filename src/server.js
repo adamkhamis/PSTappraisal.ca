@@ -130,7 +130,7 @@ const STATUS_LABEL = { paid: 'Ready to review', completed: 'Sent', awaiting_paym
 function layout(title, body) {
   return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <title>${esc(title)}</title><link rel="stylesheet" href="/style.css"></head>
-  <body class="admin"><header class="admin-bar"><a href="/admin"><b>${esc(process.env.COMPANY_NAME || 'PST Appraisals')}</b> · Admin</a></header>
+  <body class="admin"><header class="admin-bar"><a href="/admin"><b>${esc(process.env.COMPANY_NAME || 'PST Appraisal BC')}</b> · Admin</a></header>
   <main class="wrap">${body}</main></body></html>`;
 }
 

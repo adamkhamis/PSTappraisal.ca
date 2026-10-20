@@ -14,7 +14,7 @@ const transport = process.env.SMTP_HOST
   : null;
 
 async function sendAppraisal(sub, valueText, attachments) {
-  const company = process.env.COMPANY_NAME || 'Vehicle Appraisals';
+  const company = process.env.COMPANY_NAME || 'PST Appraisal BC';
   const d = sub.data;
   const vehicle = [d.year, d.make, d.model].filter(Boolean).join(' ');
   const msg = {
