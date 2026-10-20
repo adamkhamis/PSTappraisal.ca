@@ -6,7 +6,8 @@ const express = require('express');
 const multer = require('multer');
 const db = require('./db');
 const { buildCertificate, buildOfficialForm, money, UPLOADS } = require('./pdf');
-const { sendAppraisal, esc } = require('./mailer');
+const { sendAppraisal, sendContact, esc } = require('./mailer');
+const { renderPage, PAGES } = require('./pages');
 
 const PORT = process.env.PORT || 3000;
 const BASE_URL = (process.env.BASE_URL || `http://localhost:${PORT}`).replace(/\/$/, '');
@@ -34,7 +35,23 @@ app.post('/webhook/stripe', express.raw({ type: 'application/json' }), (req, res
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
-app.get('/api/config', (req, res) => res.json({ price: money(PRICE_CENTS / 100).replace('.00', '') }));
+// ---------- Public pages (site/pages/*.html, e.g. /faq, /how-it-works) ----------
+const PRICE_TEXT = money(PRICE_CENTS / 100).replace('.00', '');
+app.get(['/', ...PAGES.filter((p) => p !== 'index').map((p) => '/' + p)], (req, res) => {
+  res.send(renderPage(req.path === '/' ? 'index' : req.path.slice(1), { price: PRICE_TEXT }));
+});
+
+app.post('/api/contact', express.json(), async (req, res) => {
+  const { name, email, ref, message } = req.body || {};
+  if (!name || !/^\S+@\S+\.\S+$/.test(email || '') || !message) return res.status(400).json({ error: 'Please enter your name, a valid email and a message.' });
+  try {
+    await sendContact({ name: String(name).slice(0, 200), email: String(email).slice(0, 200), ref: String(ref || '').slice(0, 40), message: String(message).slice(0, 5000) });
+    res.json({ ok: true });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Couldn't send your message. Please email Support@PSTAppraisal.ca instead." });
+  }
+});
 
 // ---------- Customer submission ----------
 fs.mkdirSync(UPLOADS, { recursive: true });
@@ -56,6 +73,7 @@ app.post('/api/submit', upload.array('photos', 20), async (req, res) => {
   if (!/^[A-HJ-NPR-Z0-9]{17}$/i.test(b.vin.trim())) return res.status(400).json({ error: 'VIN must be 17 characters (no I, O or Q).' });
   if ((req.files || []).length < 4) return res.status(400).json({ error: 'Please upload at least 4 photos.' });
   if (!b.agree) return res.status(400).json({ error: 'Please confirm the declaration.' });
+  if (b.registered === 'yes' && !b.registered_date) return res.status(400).json({ error: 'Please enter the date you registered the vehicle.' });
 
   const { name, email, agree, ...data } = b;
   data.province = 'BC';
@@ -64,7 +82,7 @@ app.post('/api/submit', upload.array('photos', 20), async (req, res) => {
 
   if (!stripe) {
     db.markPaid(sub.ref);
-    return res.json({ url: `/success.html?ref=${sub.ref}` });
+    return res.json({ url: `/thank-you?ref=${sub.ref}` });
   }
   try {
     const session = await stripe.checkout.sessions.create({
@@ -82,7 +100,7 @@ app.post('/api/submit', upload.array('photos', 20), async (req, res) => {
       }],
       automatic_tax: { enabled: process.env.STRIPE_AUTOMATIC_TAX === 'true' },
       success_url: `${BASE_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${BASE_URL}/pay/${sub.ref}?cancelled=1`,
+      cancel_url: `${BASE_URL}/start?cancelled=1`,
     });
     db.setStripeSession(sub.id, session.id);
     res.json({ url: session.url });
@@ -96,10 +114,10 @@ app.post('/api/submit', upload.array('photos', 20), async (req, res) => {
 app.get('/pay/:ref', async (req, res) => {
   const sub = db.byRef(req.params.ref);
   if (!sub || !stripe) return res.redirect('/');
-  if (sub.status !== 'awaiting_payment') return res.redirect(`/success.html?ref=${sub.ref}`);
+  if (sub.status !== 'awaiting_payment') return res.redirect(`/thank-you?ref=${sub.ref}`);
   const session = await stripe.checkout.sessions.retrieve(sub.stripe_session_id);
   if (session.status === 'open') return res.redirect(session.url);
-  res.redirect('/?expired=1');
+  res.redirect('/start');
 });
 
 // Confirms payment on return from Stripe too (so it works even before the webhook is set up)
@@ -108,7 +126,7 @@ app.get('/success', async (req, res) => {
   try {
     const session = await stripe.checkout.sessions.retrieve(String(req.query.session_id));
     if (session.payment_status === 'paid') db.markPaid(session.client_reference_id);
-    res.redirect(`/success.html?ref=${encodeURIComponent(session.client_reference_id)}`);
+    res.redirect(`/thank-you?ref=${encodeURIComponent(session.client_reference_id)}`);
   } catch {
     res.redirect('/');
   }
@@ -125,6 +143,9 @@ app.use('/admin', adminAuth);
 app.use('/admin/photos', express.static(UPLOADS));
 
 const vehicle = (d) => [d.year, d.make, d.model, d.trim].filter(Boolean).join(' ');
+const regLabel = (d) => d.registered === 'yes'
+  ? `<span class="badge after">After registering · ${esc(d.registered_date)}</span>`
+  : '<span class="badge before">Before registering</span>';
 const STATUS_LABEL = { paid: 'Ready to review', completed: 'Sent', awaiting_payment: 'Awaiting payment' };
 
 function layout(title, body) {
@@ -167,7 +188,7 @@ app.get('/admin', (req, res) => {
       <td><a href="/admin/sub/${s.id}">${esc(s.ref)}</a></td>
       <td>${esc(s.created_at.slice(0, 16))}</td>
       <td>${esc(s.name)}<br><small>${esc(s.email)}</small></td>
-      <td><a href="/admin/sub/${s.id}">${esc(vehicle(s.data))}</a><br><small>${esc(s.data.condition)} · ${s.photos.length} photos</small></td>
+      <td><a href="/admin/sub/${s.id}">${esc(vehicle(s.data))}</a><br><small>${esc(s.data.condition)} · ${s.photos.length} photos</small><br>${regLabel(s.data)}</td>
       <td>${esc(Number(s.data.odometer).toLocaleString())} ${esc(s.data.odometer_unit || 'km')}</td>
       <td>${money(s.data.purchase_price)}</td>
       <td>${status === 'paid' ? approveForm(s, true) : status === 'completed' ? money(s.appraised_value) : '—'}</td>
@@ -191,9 +212,9 @@ app.get('/admin/sub/:id', (req, res) => {
           ${row('Colour', d.colour)}${row('Plate', d.plate)}${row('Condition', d.condition)}
           ${row('Reported issues', d.issues.join(', '))}</dl>
         <p class="desc">${esc(d.description)}</p>
-        <h2>Sale</h2><dl>
+        <h2>Sale</h2><p>${regLabel(d)}</p><dl>
           ${row('Purchase price', money(d.purchase_price))}${row('Black Book value quoted', d.black_book ? money(d.black_book) : '')}
-          ${row('Date of sale', d.sale_date)}${row('Seller', d.seller_name)}</dl>
+          ${row('Date of sale', d.sale_date)}${row('Seller', d.seller_name)}${d.registered === 'yes' ? row('PST paid', d.pst_paid ? money(d.pst_paid) : '') : ''}</dl>
         <h2>Client</h2><dl>
           ${row('Name', s.name)}${row('Email', s.email)}${row('Phone', d.phone)}
           ${row('Address', [d.address, d.city, 'BC', d.postal].filter(Boolean).join(', '))}</dl>
