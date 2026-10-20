@@ -7,35 +7,36 @@
   </div>
 </section>
 <section class="section">
-  <div class="wrap calc-page">
-    <div class="calc big-calc" data-calc="full" data-bb="bb" data-pp="pp">
-      <label>Black Book value ($)<small>On your ICBC estimate or Transfer/Tax form, listed as the average wholesale value</small><input name="bb" type="number" inputmode="decimal" min="0" placeholder="e.g. 14,000" value="14000"></label>
-      <label>What you paid ($)<small>The purchase price on your bill of sale</small><input name="pp" type="number" inputmode="decimal" min="0" placeholder="e.g. 9,000" value="9000"></label>
-      <label><span>Expected appraised value ($) <em class="opt">(optional)</em></span><small>Leave blank to see the best case: an appraisal at or below what you paid</small><input name="appraised" type="number" inputmode="decimal" min="0"></label>
-      <div data-calc-out aria-live="polite"></div>
-      <a class="btn wide" href="/start">Get my FIN 320 appraisal · {{price}}</a>
+  <div class="wrap">
+    <div class="calc2" data-calc="full" data-cta="/start">
+      <div class="calc-in">
+        <label>Price paid<span class="money-in"><i>$</i><input name="pp" type="number" inputmode="decimal" min="0" value="12000" placeholder="From your bill of sale"></span></label>
+        <label>Black Book value<span class="money-in"><i>$</i><input name="bb" type="number" inputmode="decimal" min="0" value="18000" placeholder="From ICBC"></span><small>The average wholesale value ICBC uses. Your Autoplan broker can tell you.</small></label>
+        <label><span>Expected appraised value <em class="opt">(optional)</em></span><span class="money-in"><i>$</i><input name="appraised" type="number" inputmode="decimal" min="0" placeholder="Leave blank for the best case"></span><small>Leave blank to assume an appraisal at or below what you paid.</small></label>
+        <label>Vehicle type<select name="vtype"><option value="passenger">Car, SUV, minivan or pickup (passenger vehicle)</option><option value="other">Commercial truck, van or other non-passenger vehicle</option></select></label>
+        <p class="fine">BC PST on private sales: 12% for passenger vehicles under $125,000 and 20% at $125,000 or more. Most non-passenger vehicles are 12% at any price. Source: BC Bulletin PST 308.</p>
+      </div>
+      <div class="calc-result" data-calc-out aria-live="polite"></div>
     </div>
-    <aside class="calc-notes">
+    <div class="calc-notes">
       <h2>How it's worked out</h2>
       <ol class="numbered">
         <li><b>Without an appraisal</b><span>PST is charged on the higher of what you paid and the Black Book average wholesale value.</span></li>
         <li><b>With a FIN 320 appraisal</b><span>If what you paid and the appraised value are both below Black Book, PST is charged on the higher of those two.</span></li>
         <li><b>Your saving</b><span>The difference between the two. It can never take PST below what's due on your purchase price.</span></li>
       </ol>
-      <h3>BC PST rates for passenger vehicles</h3>
+      <h3>BC PST rates on private sales</h3>
       <div class="table-wrap">
         <table class="rules">
           <thead><tr><th>Taxable value</th><th>Rate</th></tr></thead>
           <tbody>
-            <tr><td>Under $55,000</td><td>12%</td></tr>
-            <tr><td>$55,000 – $55,999.99</td><td>15%</td></tr>
-            <tr><td>$56,000 – $56,999.99</td><td>16%</td></tr>
-            <tr><td>$57,000 – $124,999.99</td><td>17%</td></tr>
-            <tr><td>$125,000 and over</td><td>20%</td></tr>
+            <tr><td>Passenger vehicle under $125,000</td><td>12%</td></tr>
+            <tr><td>Passenger vehicle $125,000 and over</td><td>20%</td></tr>
+            <tr><td>Most non-passenger vehicles (commercial trucks, vans), any price</td><td>12%</td></tr>
           </tbody>
         </table>
       </div>
       <p class="fine">This is an estimate. The appraised value depends on your vehicle's real condition, and ICBC or the Ministry of Finance decides the PST you pay. Check current rates at gov.bc.ca.</p>
-    </aside>
+    </div>
   </div>
 </section>
