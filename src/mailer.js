@@ -24,10 +24,10 @@ async function sendAppraisal(sub, valueText, attachments) {
     subject: `Your vehicle appraisal ${sub.ref} – ${vehicle}`,
     text: `Hi ${sub.name},\n\nYour appraisal for the ${vehicle} (VIN ${d.vin}) is complete.\n` +
       `Appraised value: ${valueText}\n\nYour signed appraisal is attached. Bring it with you when you register the vehicle.\n\n` +
-      `Thank you,\n${company}\n`,
+      `Questions? Reply to this email or write to Support@PSTAppraisal.ca.\n\nThank you,\n${company}\nPSTappraisal.ca\n`,
     html: `<p>Hi ${esc(sub.name)},</p><p>Your appraisal for the <b>${esc(vehicle)}</b> (VIN ${esc(d.vin)}) is complete.</p>` +
       `<p style="font-size:20px"><b>Appraised value: ${esc(valueText)}</b></p>` +
-      `<p>Your signed appraisal is attached. Bring it with you when you register the vehicle.</p><p>Thank you,<br>${esc(company)}</p>`,
+      `<p>Your signed appraisal is attached. Bring it with you when you register the vehicle.</p><p>Questions? Reply to this email or write to <a href="mailto:Support@PSTAppraisal.ca">Support@PSTAppraisal.ca</a>.</p><p>Thank you,<br>${esc(company)}<br>PSTappraisal.ca</p>`,
     attachments,
   };
 
