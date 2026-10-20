@@ -2,9 +2,9 @@
   "name": "pst-appraisal-bc",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "src/server.js",
   "scripts": {
-    "start": "node --no-warnings src/server.js",
+    "start": "node src/server.js",
     "fields": "node --no-warnings src/list-fields.js"
   },
   "keywords": [],
@@ -18,5 +18,8 @@
     "pdf-lib": "^1.17.1",
     "stripe": "^23.0.0"
   },
-  "private": true
+  "private": true,
+  "engines": {
+    "node": ">=18"
+  }
 }

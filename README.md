@@ -31,4 +31,5 @@ BC's appraisal form is **FIN 320, Motor Vehicle Appraisal** (gov.bc.ca → Taxes
 After that, every approval attaches the filled FIN 320 as well as the branded certificate. If the form needs a handwritten signature, put a PNG of your signature at `SIGNATURE_IMAGE`.
 
 ## Going live
-Any Node 22+ host works (Render, Railway, Fly.io, a VPS). Keep `data.sqlite` and `uploads/` on a persistent disk, set `BASE_URL` to your real domain, and use HTTPS.
+- **CanSpace (cPanel):** follow [DEPLOY-CANSPACE.md](DEPLOY-CANSPACE.md).
+- Any other Node 18+ host works too. Keep `data/` and `uploads/` on a persistent disk, set `BASE_URL` to your real domain, and use HTTPS.
