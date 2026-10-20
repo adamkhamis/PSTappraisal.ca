@@ -1,0 +1,16 @@
+{
+  "_README": "Copy to field-map.json once official-form.pdf (FIN 320) is in this folder. Run `npm run fields` to list the real PDF field names, then map each one (left) to a data key (right). Data keys: ref, date, buyer_name, buyer_email, buyer_phone, buyer_address, seller_name, sale_date, purchase_price, vin, year, make, model, trim, colour, odometer, plate, condition, appraised_value, appraised_value_number, appraiser_notes, appraiser_name, appraiser_license, company_name, company_address, company_phone. Delete this _README line.",
+  "PurchaserName": "buyer_name",
+  "VIN": "vin",
+  "Year": "year",
+  "Make": "make",
+  "Model": "model",
+  "Odometer": "odometer",
+  "PurchasePrice": "purchase_price",
+  "DateOfPurchase": "sale_date",
+  "AppraisedValue": "appraised_value",
+  "AppraiserName": "appraiser_name",
+  "BusinessName": "company_name",
+  "DealerNumber": "appraiser_license",
+  "Date": "date"
+}
