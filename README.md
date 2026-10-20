@@ -1,4 +1,4 @@
-# PST Appraisals BC
+# PST Appraisal BC
 
 A website for BC private-sale vehicle PST appraisals. Customers fill in the vehicle details, upload photos and pay with Stripe. You review each order in `/admin`, approve or change the value in one click, and the client gets the PDF appraisal by email.
 
@@ -19,7 +19,7 @@ Without Stripe keys, orders are marked paid with no charge (test mode). Without 
 
 ## Stripe setup
 - Put your secret key in `STRIPE_SECRET_KEY`.
-- In Dashboard → Developers → Webhooks, add `https://YOURDOMAIN/webhook/stripe` for the `checkout.session.completed` event, then put its signing secret in `STRIPE_WEBHOOK_SECRET`.
+- In Dashboard → Developers → Webhooks, add `https://pstappraisal.ca/webhook/stripe` for the `checkout.session.completed` event, then put its signing secret in `STRIPE_WEBHOOK_SECRET`.
 - Payment is also confirmed when the customer returns from Stripe, so the webhook is a backup.
 
 ## Filling the official FIN 320 form
