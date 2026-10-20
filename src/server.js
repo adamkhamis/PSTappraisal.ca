@@ -11,7 +11,10 @@ const { renderPage, PAGES } = require('./pages');
 
 const PORT = process.env.PORT || 3000;
 const BASE_URL = (process.env.BASE_URL || `http://localhost:${PORT}`).replace(/\/$/, '');
-const PRICE_CENTS = Number(process.env.PRICE_CENTS || 9900);
+const PRICE_CENTS = Number(process.env.PRICE_CENTS || 7000);
+const TAX_PERCENT = Number(process.env.TAX_PERCENT ?? 5); // GST. Set to 0 if you're not registered for GST.
+const TAX_NAME = process.env.TAX_NAME || 'GST';
+const TAX_CENTS = Math.round(PRICE_CENTS * TAX_PERCENT / 100);
 const stripe = process.env.STRIPE_SECRET_KEY ? require('stripe')(process.env.STRIPE_SECRET_KEY) : null;
 if (!stripe) console.warn('[stripe] STRIPE_SECRET_KEY not set — TEST MODE: submissions are marked paid without charging.');
 
@@ -36,9 +39,15 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
 // ---------- Public pages (site/pages/*.html, e.g. /faq, /how-it-works) ----------
-const PRICE_TEXT = money(PRICE_CENTS / 100).replace('.00', '');
+const PRICE_VARS = {
+  price_amount: money(PRICE_CENTS / 100).replace('.00', ''),
+  price: money(PRICE_CENTS / 100).replace('.00', '') + (TAX_CENTS ? ` + ${TAX_NAME}` : ''),
+  tax_name: TAX_NAME,
+  tax_line: TAX_CENTS ? `+ ${money(TAX_CENTS / 100)} ${TAX_NAME} (${TAX_PERCENT}%) = ${money((PRICE_CENTS + TAX_CENTS) / 100)} total` : 'No tax added',
+  fee_total: String((PRICE_CENTS + TAX_CENTS) / 100),
+};
 app.get(['/', ...PAGES.filter((p) => p !== 'index').map((p) => '/' + p)], (req, res) => {
-  res.send(renderPage(req.path === '/' ? 'index' : req.path.slice(1), { price: PRICE_TEXT }));
+  res.send(renderPage(req.path === '/' ? 'index' : req.path.slice(1), PRICE_VARS));
 });
 
 app.post('/api/contact', express.json(), async (req, res) => {
@@ -95,10 +104,12 @@ app.post('/api/submit', upload.array('photos', 20), async (req, res) => {
         price_data: {
           currency: 'cad',
           unit_amount: PRICE_CENTS,
-          product_data: { name: 'PST Vehicle Appraisal', description: `${data.year} ${data.make} ${data.model} – VIN ${data.vin}` },
+          product_data: { name: 'FIN 320 PST Vehicle Appraisal', description: `${data.year} ${data.make} ${data.model} – VIN ${data.vin}` },
         },
-      }],
-      automatic_tax: { enabled: process.env.STRIPE_AUTOMATIC_TAX === 'true' },
+      }].concat(TAX_CENTS ? [{
+        quantity: 1,
+        price_data: { currency: 'cad', unit_amount: TAX_CENTS, product_data: { name: `${TAX_NAME} (${TAX_PERCENT}%)`, description: process.env.TAX_NUMBER ? `${TAX_NAME} #${process.env.TAX_NUMBER}` : undefined } },
+      }] : []),
       success_url: `${BASE_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${BASE_URL}/start?cancelled=1`,
     });

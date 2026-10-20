@@ -1,0 +1,41 @@
+<!--meta {"title":"PST Savings Calculator for Used Vehicles in BC | PST Appraisal BC","description":"Work out how much PST you could save on a privately bought vehicle in BC with a FIN 320 appraisal. Compare PST on Black Book with PST on what you paid.","scripts":["/calc.js"]} -->
+<section class="page-hero">
+  <div class="wrap narrow">
+    <p class="eyebrow dark">PST savings calculator</p>
+    <h1>How much PST will you save?</h1>
+    <p class="lead">Compare the PST ICBC charges on the Black Book value with the PST you'd pay using a FIN 320 appraisal. If you've already registered, the saving is roughly what you could get refunded.</p>
+  </div>
+</section>
+<section class="section">
+  <div class="wrap calc-page">
+    <div class="calc big-calc" data-calc="full" data-bb="bb" data-pp="pp">
+      <label>Black Book value ($)<small>On your ICBC estimate or Transfer/Tax form, listed as the average wholesale value</small><input name="bb" type="number" inputmode="decimal" min="0" placeholder="e.g. 14,000" value="14000"></label>
+      <label>What you paid ($)<small>The purchase price on your bill of sale</small><input name="pp" type="number" inputmode="decimal" min="0" placeholder="e.g. 9,000" value="9000"></label>
+      <label><span>Expected appraised value ($) <em class="opt">(optional)</em></span><small>Leave blank to see the best case: an appraisal at or below what you paid</small><input name="appraised" type="number" inputmode="decimal" min="0"></label>
+      <div data-calc-out aria-live="polite"></div>
+      <a class="btn wide" href="/start">Get my FIN 320 appraisal · {{price}}</a>
+    </div>
+    <aside class="calc-notes">
+      <h2>How it's worked out</h2>
+      <ol class="numbered">
+        <li><b>Without an appraisal</b><span>PST is charged on the higher of what you paid and the Black Book average wholesale value.</span></li>
+        <li><b>With a FIN 320 appraisal</b><span>If what you paid and the appraised value are both below Black Book, PST is charged on the higher of those two.</span></li>
+        <li><b>Your saving</b><span>The difference between the two. It can never take PST below what's due on your purchase price.</span></li>
+      </ol>
+      <h3>BC PST rates for passenger vehicles</h3>
+      <div class="table-wrap">
+        <table class="rules">
+          <thead><tr><th>Taxable value</th><th>Rate</th></tr></thead>
+          <tbody>
+            <tr><td>Under $55,000</td><td>12%</td></tr>
+            <tr><td>$55,000 – $55,999.99</td><td>15%</td></tr>
+            <tr><td>$56,000 – $56,999.99</td><td>16%</td></tr>
+            <tr><td>$57,000 – $124,999.99</td><td>17%</td></tr>
+            <tr><td>$125,000 and over</td><td>20%</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="fine">This is an estimate. The appraised value depends on your vehicle's real condition, and ICBC or the Ministry of Finance decides the PST you pay. Check current rates at gov.bc.ca.</p>
+    </aside>
+  </div>
+</section>

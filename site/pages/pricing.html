@@ -1,4 +1,4 @@
-<!--meta {"title":"Pricing | PST Appraisal BC","description":"One flat price for a BC PST vehicle appraisal, with a signed FIN 320 form included."} -->
+<!--meta {"title":"Pricing | PST Appraisal BC","description":"One flat price of {{price}} for a signed FIN 320 Motor Vehicle Appraisal for BC PST.","scripts":["/calc.js"]} -->
 <section class="page-hero">
   <div class="wrap narrow">
     <p class="eyebrow dark">Pricing</p>
@@ -9,9 +9,9 @@
 <section class="section">
   <div class="wrap price-grid">
     <div class="price-card">
-      <p class="card-label">PST appraisal</p>
-      <p class="price">{{price}}<span> CAD</span></p>
-      <p class="fine">Plus GST if applicable.</p>
+      <p class="card-label">FIN 320 PST appraisal</p>
+      <p class="price">{{price_amount}}<span> + {{tax_name}}</span></p>
+      <p class="fine">{{tax_line}}, paid by card at checkout.</p>
       <ul class="ticks">
         <li>Review by a qualified appraiser</li>
         <li>Completed and signed Motor Vehicle Appraisal form (FIN 320)</li>
@@ -20,7 +20,7 @@
         <li>Usually emailed within 1 business day</li>
         <li>Email support at Support@PSTAppraisal.ca</li>
       </ul>
-      <a class="btn wide" href="/start">Start my appraisal</a>
+      <a class="btn wide" href="/start">Get my FIN 320 appraisal</a>
     </div>
     <div class="price-side">
       <h2>Is it worth it?</h2>
@@ -37,6 +37,7 @@
         </table>
       </div>
       <p class="fine">The saving depends on the appraised value, which reflects your vehicle's real condition. If you paid Black Book value or more, an appraisal won't help.</p>
+      <a class="link-arrow" href="/pst-calculator">Work out your exact saving</a>
     </div>
   </div>
 </section>

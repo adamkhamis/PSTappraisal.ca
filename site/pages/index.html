@@ -1,17 +1,18 @@
-<!--meta {"title":"PST Appraisal BC | Pay PST on what your vehicle is really worth","description":"Bought a used vehicle privately in BC? If it's worth less than the Black Book value, get an online PST appraisal before or after you register."} -->
+<!--meta {"title":"FIN 320 PST Vehicle Appraisals in BC | PST Appraisal BC","scripts":["/calc.js"],"description":"Bought a used vehicle privately in BC? If it's worth less than the Black Book value, get an online FIN 320 appraisal before or after you register."} -->
 <section class="hero">
   <div class="wrap hero-grid">
     <div>
-      <p class="eyebrow">For private-sale vehicles in British Columbia</p>
+      <p class="eyebrow">FIN 320 appraisals · BC private-sale vehicles</p>
       <h1>Pay PST on what your vehicle is <em>really</em> worth.</h1>
-      <p class="lead">When you register a privately bought vehicle, ICBC collects PST on the higher of your purchase price or the Canadian Black Book average wholesale value. If high kilometres, damage or mechanical problems make your vehicle worth less, our appraisal can lower the value you're taxed on.</p>
+      <p class="lead">When you register a privately bought vehicle, ICBC collects PST on the higher of your purchase price or the Canadian Black Book average wholesale value. If high kilometres, damage or mechanical problems make your vehicle worth less, a signed <b>FIN 320 Motor Vehicle Appraisal</b> can lower the value you're taxed on.</p>
       <div class="hero-cta">
-        <a class="btn" href="/start">Start my appraisal</a>
-        <a class="btn ghost-light" href="/how-it-works">See how it works</a>
+        <a class="btn" href="/start">Get my FIN 320 appraisal</a>
+        <a class="btn ghost-light" href="/pst-calculator">See how much you'll save</a>
       </div>
       <ul class="ticks light">
+        <li>Signed FIN 320 form, ready for ICBC</li>
         <li>100% online, no inspection appointment</li>
-        <li>Flat fee of {{price}}</li>
+        <li>{{price}}, flat fee</li>
         <li>Works before <b>or</b> after you register</li>
       </ul>
     </div>
@@ -39,15 +40,15 @@
     <div class="paths">
       <article class="path">
         <span class="path-tag">Before registering</span>
-        <h3>Bring the appraisal to ICBC</h3>
-        <p>Get your appraisal first, then take it to any Autoplan broker when you register and insure the vehicle. PST is worked out on the appraised value (or your purchase price, if that's higher) right then.</p>
+        <h3>Bring your FIN 320 to ICBC</h3>
+        <p>Get your FIN 320 appraisal first, then take it to any Autoplan broker when you register and insure the vehicle. PST is worked out on the appraised value (or your purchase price, if that's higher) right then.</p>
         <ul class="ticks"><li>Pay the lower PST right away</li><li>No refund forms to fill in</li></ul>
         <a class="link-arrow" href="/before-or-after#before">Before registering, step by step</a>
       </article>
       <article class="path">
         <span class="path-tag alt">After registering</span>
         <h3>Claim back the extra PST</h3>
-        <p>Already registered and paid PST on the Black Book value? Send our appraisal to the province with a PST refund application (FIN 355/MV) within 30 days of registering, and they refund the difference.</p>
+        <p>Already registered and paid PST on the Black Book value? Send your FIN 320 to the province with a PST refund application (FIN 355/MV) within 30 days of registering, and they refund the difference.</p>
         <ul class="ticks"><li>Register now, sort out PST later</li><li>We include refund instructions</li></ul>
         <a class="link-arrow" href="/before-or-after#after">After registering, step by step</a>
       </article>
@@ -67,7 +68,7 @@
       <li><span class="step-n">3</span><h3>Pay securely</h3><p>One flat fee of {{price}}, paid by card through Stripe.</p></li>
       <li><span class="step-n">4</span><h3>Get your appraisal</h3><p>A completed, signed BC Motor Vehicle Appraisal form (FIN 320), emailed to you as a PDF.</p></li>
     </ol>
-    <p class="center"><a class="btn" href="/start">Start my appraisal</a></p>
+    <p class="center"><a class="btn" href="/start">Get my FIN 320 appraisal</a></p>
   </div>
 </section>
 
@@ -75,13 +76,14 @@
   <div class="wrap calc-grid">
     <div>
       <p class="eyebrow dark">Savings calculator</p>
-      <h2>How much could you save?</h2>
-      <p>Enter the Black Book value on your ICBC estimate and what you paid. This shows the most you could save. Tax is never charged on less than your purchase price, and the appraised value depends on the vehicle's real condition.</p>
+      <h2>How much PST will you save?</h2>
+      <p>Enter the Black Book value on your ICBC estimate and what you paid. This shows the most you could save with a FIN 320 appraisal. Tax is never charged on less than your purchase price, and the appraised value depends on the vehicle's real condition.</p>
+      <a class="link-arrow" href="/pst-calculator">Open the full calculator</a>
     </div>
-    <div class="calc">
-      <label>Black Book value ($)<input id="c-bb" type="number" inputmode="decimal" placeholder="9800"></label>
-      <label>What you paid ($)<input id="c-pp" type="number" inputmode="decimal" placeholder="6000"></label>
-      <p id="c-out" class="calc-out">Enter both values.</p>
+    <div class="calc" data-calc data-bb="bb" data-pp="pp">
+      <label>Black Book value ($)<input name="bb" type="number" inputmode="decimal" placeholder="9800"></label>
+      <label>What you paid ($)<input name="pp" type="number" inputmode="decimal" placeholder="6000"></label>
+      <div data-calc-out aria-live="polite"></div>
       <p class="fine">Uses BC's PST rates for passenger vehicles. Check current rates at gov.bc.ca.</p>
     </div>
   </div>
@@ -110,6 +112,7 @@
     <div class="section-head">
       <p class="eyebrow dark">Common questions</p>
       <h2>Quick answers</h2>
+    <details><summary>What is a FIN 320?</summary><p>The FIN 320 is BC's official Motor Vehicle Appraisal form for PST. It must be completed by a registered dealer or a professional appraiser, and it's what we send you. <a href="/fin-320">More about the FIN 320</a>.</p></details>
     </div>
     <details><summary>Is this allowed?</summary><p>Yes. BC's PST rules allow a vehicle appraisal from a registered dealer or a professional appraiser. If the appraised value and your purchase price are both below the Black Book average wholesale value, PST is charged on the higher of those two.</p></details>
     <details><summary>Do I need to bring the vehicle anywhere?</summary><p>No. Everything is done from your details and photos. We may ask for more photos if we need them.</p></details>

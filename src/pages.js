@@ -13,8 +13,8 @@ function renderPage(name, vars) {
   const scripts = (meta.scripts || []).map((s) => `<script src="${s}"></script>`).join('\n');
   const html = read('partials/header.html') + body + read('partials/footer.html');
   const all = { title: 'PST Appraisal BC', description: '', ...meta, scripts, today: new Date().toLocaleDateString('en-CA', { year: 'numeric', month: 'long', day: 'numeric' }), ...vars };
-  return html
-    .replace(/\{\{(\w+)\}\}/g, (_, k) => all[k] ?? '')
+  const fill = (t) => t.replace(/\{\{(\w+)\}\}/g, (_, k) => all[k] ?? '');
+  return fill(fill(html)) // twice, so values like the meta description can use {{price}}
     .replace(`data-nav="${name}"`, `data-nav="${name}" aria-current="page"`);
 }
 
