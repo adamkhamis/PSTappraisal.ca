@@ -41,7 +41,7 @@ app.use(express.static(path.join(__dirname, '..', 'public')));
 // ---------- Public pages (site/pages/*.html, e.g. /faq, /how-it-works) ----------
 const PRICE_VARS = {
   price_amount: money(PRICE_CENTS / 100).replace('.00', ''),
-  price: money(PRICE_CENTS / 100).replace('.00', '') + (TAX_CENTS ? ` + ${TAX_NAME}` : ''),
+  price: money(PRICE_CENTS / 100).replace('.00', ''),
   tax_name: TAX_NAME,
   tax_line: TAX_CENTS ? `+ ${money(TAX_CENTS / 100)} ${TAX_NAME} (${TAX_PERCENT}%) = ${money((PRICE_CENTS + TAX_CENTS) / 100)} total` : 'No tax added',
   fee_total: String((PRICE_CENTS + TAX_CENTS) / 100),
