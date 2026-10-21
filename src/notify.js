@@ -1,8 +1,9 @@
 // Tells you about each new paid order: an email to NOTIFY_EMAIL and a text to NOTIFY_SMS_TO via voip.ms.
 const { sendMail } = require('./mailer');
+const { toNumber } = require('./num');
 
 const BASE_URL = () => (process.env.BASE_URL || `http://localhost:${process.env.PORT || 3000}`).replace(/\/$/, '');
-const money = (n) => '$' + Number(n || 0).toLocaleString('en-CA');
+const money = (n) => '$' + (toNumber(n) || 0).toLocaleString('en-CA');
 
 async function sendSms(text, mustSend = false) {
   const { VOIPMS_API_USERNAME: user, VOIPMS_API_PASSWORD: pass, VOIPMS_DID: did, NOTIFY_SMS_TO: to } = process.env;
@@ -30,10 +31,10 @@ async function notifyNewOrder(sub) {
     jobs.push(sendMail({
       to: process.env.NOTIFY_EMAIL,
       subject: `New appraisal order ${sub.ref}: ${vehicle}, paid ${money(d.purchase_price)}`,
-      text: `New paid order ${sub.ref}\n\n${sub.name} · ${sub.email} · ${d.phone}\n${vehicle} · ${Number(d.odometer).toLocaleString()} ${d.odometer_unit || 'km'} · ${d.condition}\n` +
+      text: `New paid order ${sub.ref}\n\n${sub.name} · ${sub.email} · ${d.phone}\n${vehicle} · ${toNumber(d.odometer).toLocaleString()} ${d.odometer_unit || 'km'} · ${d.condition}\n` +
         `Price paid: ${money(d.purchase_price)}   Black Book: ${d.black_book ? money(d.black_book) : 'not given'}\n${when}\n\nReview and confirm the appraisal:\n${link}\n`,
       html: `<p><b>New paid order ${sub.ref}</b></p>
-        <p>${esc(sub.name)} · ${esc(sub.email)} · ${esc(d.phone)}<br>${esc(vehicle)} · ${Number(d.odometer).toLocaleString()} ${esc(d.odometer_unit || 'km')} · ${esc(d.condition)}<br>
+        <p>${esc(sub.name)} · ${esc(sub.email)} · ${esc(d.phone)}<br>${esc(vehicle)} · ${toNumber(d.odometer).toLocaleString()} ${esc(d.odometer_unit || 'km')} · ${esc(d.condition)}<br>
         Price paid: <b>${money(d.purchase_price)}</b> · Black Book: <b>${d.black_book ? money(d.black_book) : 'not given'}</b><br>${esc(when)}</p>
         <p><a href="${link}" style="display:inline-block;background:#1456a8;color:#fff;padding:12px 22px;border-radius:999px;text-decoration:none;font-weight:bold">Review &amp; confirm appraisal</a></p>
         <p style="color:#666;font-size:13px">${link}</p>`,

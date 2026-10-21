@@ -11,6 +11,7 @@ const { buildCertificate, buildFin320, buildFin355, refundEstimate, FIN_CONDITIO
 const { sendAppraisal, sendContact, esc } = require('./mailer');
 const { renderPage, PAGES, sitemapXml, robotsTxt } = require('./pages');
 const UPLOAD_GROUPS = require('./uploads');
+const { toNumber } = require('./num');
 const { notifyNewOrder } = require('./notify');
 
 // Marks an order paid and, the first time only, emails and texts you about it.
@@ -117,6 +118,13 @@ app.post('/api/submit', upload.fields(UPLOAD_GROUPS.map((g) => ({ name: g.key, m
 
   const { name, email, agree, ...data } = b;
   data.province = 'BC';
+  // Store numbers plainly, whatever way they were typed ("150,000 km" → 150000, "$8,200.00" → 8200).
+  for (const [k, label] of [['odometer', 'odometer reading'], ['purchase_price', 'purchase price'], ['black_book', 'Black Book value'], ['pst_paid', 'PST paid']]) {
+    if (data[k] === undefined || String(data[k]).trim() === '') { delete data[k]; continue; }
+    const n = toNumber(data[k]);
+    if (!(n >= 0)) return res.status(400).json({ error: `Please enter the ${label} as a number.` });
+    data[k] = String(n);
+  }
   if (data.registered !== 'yes') { delete data.registered_date; delete data.pst_paid; } // only for already-registered vehicles
   data.issues = [].concat(b.issues || []);
   const sub = db.create({ name: name.trim(), email: email.trim(), data, photos: UPLOAD_GROUPS.flatMap((g) => (files[g.key] || []).map((f) => ({ file: f.filename, group: g.key, name: f.originalname, pdf: f.mimetype === 'application/pdf' }))) });
@@ -214,8 +222,8 @@ function approveForm(sub, compact) {
   const d = sub.data;
   const value = sub.appraised_value ?? d.purchase_price;
   return `<form method="post" action="/admin/sub/${sub.id}/approve" class="${compact ? 'inline-approve' : 'approve'}"
-     onsubmit="return confirmSend(this, ${Number(d.purchase_price) || 0})">
-    <label>Appraised value ($)<input name="value" type="number" step="0.01" min="0" required value="${esc(value)}"></label>
+     onsubmit="return confirmSend(this, ${toNumber(d.purchase_price) || 0})">
+    <label>Appraised value ($)<input name="value" type="text" inputmode="decimal" required value="${esc(value)}"></label>
     ${compact ? '' : `<label>Condition on FIN 320<select name="condition">${['Good', 'Fair', 'Poor'].map((c) => `<option ${c === (sub.fin_condition || FIN_CONDITION[d.condition]) ? 'selected' : ''}>${c}</option>`).join('')}</select></label>
     <label>Appraiser comments (printed on the FIN 320 and certificate)<textarea name="notes" rows="3">${esc(sub.appraiser_notes || '')}</textarea></label>`}
     <div class="btns">
@@ -227,7 +235,7 @@ function approveForm(sub, compact) {
 
 const confirmScript = `<script>
 function confirmSend(f, price) {
-  var v = parseFloat(f.value.value);
+  var v = parseFloat(String(f.value.value).replace(/[^\d.]/g, ''));
   if (price && v < price && !confirm('Appraised value is BELOW the declared purchase price. PST is charged on the greater of the two, so this will not lower the client\\'s tax. Send anyway?')) return false;
   return confirm('Generate the appraisal at $' + v.toLocaleString() + ' and email it to the client?');
 }</script>`;
@@ -245,7 +253,7 @@ app.get('/admin', (req, res) => {
       <td>${esc(s.created_at.slice(0, 16))}</td>
       <td>${esc(s.name)}<br><small>${esc(s.email)}</small></td>
       <td><a href="/admin/sub/${s.id}">${esc(vehicle(s.data))}</a><br><small>${esc(s.data.condition)} · ${s.photos.length} files</small><br>${regLabel(s.data)}</td>
-      <td>${esc(Number(s.data.odometer).toLocaleString())} ${esc(s.data.odometer_unit || 'km')}</td>
+      <td>${esc(toNumber(s.data.odometer).toLocaleString())} ${esc(s.data.odometer_unit || 'km')}</td>
       <td>${money(s.data.purchase_price)}</td>
       <td>${status === 'paid' ? approveForm(s, true) : status === 'completed' ? money(s.appraised_value) : '—'}</td>
     </tr>`).join('')}</tbody></table>` : '<p class="empty">Nothing here.</p>';
@@ -264,7 +272,7 @@ app.get('/admin/sub/:id', (req, res) => {
     <div class="detail">
       <section>
         <h2>Vehicle</h2><dl>
-          ${row('VIN', d.vin?.toUpperCase())}${row('Odometer', `${Number(d.odometer).toLocaleString()} ${d.odometer_unit || 'km'}`)}
+          ${row('VIN', d.vin?.toUpperCase())}${row('Odometer', `${toNumber(d.odometer).toLocaleString()} ${d.odometer_unit || 'km'}`)}
           ${row('Colour', d.colour)}${row('Plate', d.plate)}${row('Condition', d.condition)}
           ${row('Reported issues', d.issues.join(', '))}</dl>
         <p class="desc">${esc(d.description)}</p>
@@ -306,7 +314,7 @@ async function buildAttachments(sub, value, notes, condition) {
 app.post('/admin/sub/:id/preview', async (req, res) => {
   const s = db.byId(req.params.id);
   if (!s) return res.sendStatus(404);
-  const value = Number(req.body.value) || 0;
+  const value = toNumber(req.body.value) || 0;
   const [first] = await buildAttachments(s, value, req.body.notes, req.body.condition);
   res.type('pdf').set('Content-Disposition', `inline; filename="${first.filename}"`).send(first.content);
 });
@@ -314,7 +322,7 @@ app.post('/admin/sub/:id/preview', async (req, res) => {
 app.post('/admin/sub/:id/approve', async (req, res) => {
   const s = db.byId(req.params.id);
   if (!s || s.status === 'awaiting_payment') return res.status(400).send('Submission not found or not paid.');
-  const value = Number(req.body.value);
+  const value = toNumber(req.body.value);
   if (!(value > 0)) return res.status(400).send('Enter a valid appraised value.');
   const notes = req.body.notes ?? s.appraiser_notes ?? '';
   try {
@@ -401,7 +409,7 @@ app.post('/admin/settings', signatureUpload.single('signature'), (req, res) => {
       else if (v) changes[f.key] = v; // blank = keep the saved one
       continue;
     }
-    if (f.type === 'money') v = v ? String(Math.round(parseFloat(v) * 100)) : '';
+    if (f.type === 'money') v = v ? String(Math.round(toNumber(v) * 100)) : '';
     changes[f.key] = v;
   }
   if (req.file) changes.SIGNATURE_IMAGE = req.file.path;

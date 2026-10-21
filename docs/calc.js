@@ -18,7 +18,7 @@
   document.querySelectorAll('[data-calc]').forEach((box) => {
     const scope = box.closest('form') || box;
     const field = (n) => scope.querySelector(`[name="${n}"]`);
-    const num = (n) => parseFloat((field(n) || {}).value) || 0;
+    const num = (n) => parseFloat(String((field(n) || {}).value || '').replace(/[^\d.]/g, '')) || 0; // accepts 10,000 and $10,000
     const out = box.querySelector('[data-calc-out]');
     const mini = box.dataset.calc === 'mini';
 

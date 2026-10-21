@@ -1,12 +1,13 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { toNumber } = require('./num');
 const { PDFDocument, PDFName, StandardFonts, rgb, pushGraphicsState, popGraphicsState, concatTransformationMatrix, drawObject } = require('@cantoo/pdf-lib');
 
 const UPLOADS = path.join(__dirname, '..', 'uploads');
 const TEMPLATES = path.join(__dirname, '..', 'templates');
 
-const money = (n) => '$' + Number(n).toLocaleString('en-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const money = (n) => '$' + toNumber(n).toLocaleString('en-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 // Everything a PDF (ours or an official template) might need, flattened to strings.
 function fieldValues(sub, value, notes) {
@@ -26,7 +27,7 @@ function fieldValues(sub, value, notes) {
     model: d.model || '',
     trim: d.trim || '',
     colour: d.colour || '',
-    odometer: d.odometer ? `${Number(d.odometer).toLocaleString('en-CA')} ${d.odometer_unit || 'km'}` : '',
+    odometer: d.odometer ? `${toNumber(d.odometer).toLocaleString('en-CA')} ${d.odometer_unit || 'km'}` : '',
     plate: d.plate || '',
     condition: d.condition || '',
     appraised_value: money(value),
@@ -154,7 +155,7 @@ async function buildCertificate(sub, value, notes) {
 const PERMISSIONS = { printing: 'highResolution', modifying: false, copying: false, annotating: true, fillingForms: true, contentAccessibility: true, documentAssembly: false };
 
 const ymd = (d) => (d ? String(d).replace(/-/g, '/') : '');
-const amount = (n) => Number(n).toLocaleString('en-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const amount = (n) => toNumber(n).toLocaleString('en-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const pstRate = (v) => (v >= 125000 ? 0.2 : 0.12); // BC private-sale passenger vehicle rates
 // FIN 320 only offers Good / Fair / Poor
 const FIN_CONDITION = { Excellent: 'Good', Good: 'Good', Fair: 'Fair', Poor: 'Poor', 'Not running': 'Poor' };
@@ -171,9 +172,9 @@ function company() {
 
 // Estimated refund: PST paid at registration minus PST on the higher of the price and the appraised value.
 function refundEstimate(sub, value) {
-  const d = sub.data, price = Number(d.purchase_price) || 0, bb = Number(d.black_book) || 0;
-  const paid = Number(d.pst_paid) || (bb > price ? bb * pstRate(bb) : 0);
-  const taxable = Math.max(price, value);
+  const d = sub.data, price = toNumber(d.purchase_price) || 0, bb = toNumber(d.black_book) || 0;
+  const paid = toNumber(d.pst_paid) || (bb > price ? bb * pstRate(bb) : 0);
+  const taxable = Math.max(price, toNumber(value) || 0);
   const due = taxable * pstRate(taxable);
   return paid > due ? Math.round((paid - due) * 100) / 100 : 0;
 }
@@ -230,7 +231,7 @@ async function buildFin320(sub, value, notes, condition) {
     txtPurchaserPostalCode: d.postal, txtPurchaserContactPhone: d.phone,
     txtYear: d.year, txtMake: d.make, txtModel: d.model, txtTrim: d.trim, txtVIN: (d.vin || '').toUpperCase(),
     txtAppraisalDate: today, txtAppraisedValue: amount(value),
-    txtOdometer: d.odometer ? `${Number(d.odometer).toLocaleString('en-CA')} ${d.odometer_unit || 'km'}` : '',
+    txtOdometer: d.odometer ? `${toNumber(d.odometer).toLocaleString('en-CA')} ${d.odometer_unit || 'km'}` : '',
     txtAppraiserComments: comments, txtAppraiserName: c.contact, txtDateSigned: today,
   });
   const box = CONDITION_BOX[condition || FIN_CONDITION[d.condition]];
