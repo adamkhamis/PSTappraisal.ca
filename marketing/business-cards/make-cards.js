@@ -71,7 +71,7 @@ const OUT = process.env.OUT || '/home/user/appraisal-app/marketing/business-card
           <line x1="38" y1="47" x2="70" y2="47"/>
         </g>
         <rect x="38" y="54" width="46" height="11" rx="2" fill="#8fe0b4" fill-opacity=".22" stroke="#8fe0b4" stroke-opacity=".7"/>
-        <text x="42" y="62" font-family="Archivo, Arial" font-weight="800" font-size="6.6" fill="#8fe0b4">$ 8,200.00</text>
+        <path d="M42 59.5 l2.5 2.5 l4.5 -5" fill="none" stroke="#8fe0b4" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><line x1="53" y1="59.5" x2="78" y2="59.5" stroke="#8fe0b4" stroke-opacity=".8" stroke-width="1.8" stroke-linecap="round"/>
         <path d="M38 76 q5 -6 9 0 t9 0 t9 -2" fill="none" stroke="#ffffff" stroke-opacity=".6" stroke-width="1.3" stroke-linecap="round"/>
       </g>
       <g transform="translate(4 70)">
