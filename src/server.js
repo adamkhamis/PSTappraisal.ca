@@ -8,6 +8,7 @@ const db = require('./db');
 const { buildCertificate, buildFin320, buildFin355, refundEstimate, FIN_CONDITION, money, UPLOADS } = require('./pdf');
 const { sendAppraisal, sendContact, esc } = require('./mailer');
 const { renderPage, PAGES } = require('./pages');
+const UPLOAD_GROUPS = require('./uploads');
 
 const PORT = process.env.PORT || 3000;
 const BASE_URL = (process.env.BASE_URL || `http://localhost:${PORT}`).replace(/\/$/, '');
@@ -69,25 +70,29 @@ const upload = multer({
     destination: UPLOADS,
     filename: (req, file, cb) => cb(null, crypto.randomBytes(12).toString('hex') + path.extname(file.originalname).toLowerCase()),
   }),
-  limits: { fileSize: 15 * 1024 * 1024, files: 20 },
-  fileFilter: (req, file, cb) => cb(null, /^image\//.test(file.mimetype)),
+  limits: { fileSize: 15 * 1024 * 1024, files: 60 },
+  fileFilter: (req, file, cb) => cb(null, /^image\//.test(file.mimetype) || file.mimetype === 'application/pdf'),
 });
 
 const REQUIRED = ['name', 'email', 'phone', 'address', 'city', 'postal', 'vin', 'year', 'make', 'model', 'odometer', 'purchase_price', 'sale_date', 'condition'];
 
-app.post('/api/submit', upload.array('photos', 20), async (req, res) => {
+app.post('/api/submit', upload.fields(UPLOAD_GROUPS.map((g) => ({ name: g.key, maxCount: g.max }))), async (req, res) => {
   const b = req.body;
   const missing = REQUIRED.filter((k) => !String(b[k] || '').trim());
   if (missing.length) return res.status(400).json({ error: 'Please fill in: ' + missing.join(', ') });
   if (!/^[A-HJ-NPR-Z0-9]{17}$/i.test(b.vin.trim())) return res.status(400).json({ error: 'VIN must be 17 characters (no I, O or Q).' });
-  if ((req.files || []).length < 4) return res.status(400).json({ error: 'Please upload at least 4 photos.' });
+  const files = req.files || {};
+  const missingUploads = UPLOAD_GROUPS.filter((g) => g.required && !(files[g.key] || []).length).map((g) => g.label);
+  if (missingUploads.length) return res.status(400).json({ error: 'Please add: ' + missingUploads.join('; ') + '.' });
+  const vehiclePhotos = (files.vehicle || []).length;
+  if (vehiclePhotos < 4) return res.status(400).json({ error: 'Please add at least 4 vehicle photos: front, back, a side and the odometer.' });
   if (!b.agree) return res.status(400).json({ error: 'Please confirm the declaration.' });
   if (b.registered === 'yes' && !b.registered_date) return res.status(400).json({ error: 'Please enter the date you registered the vehicle.' });
 
   const { name, email, agree, ...data } = b;
   data.province = 'BC';
   data.issues = [].concat(b.issues || []);
-  const sub = db.create({ name: name.trim(), email: email.trim(), data, photos: req.files.map((f) => f.filename) });
+  const sub = db.create({ name: name.trim(), email: email.trim(), data, photos: UPLOAD_GROUPS.flatMap((g) => (files[g.key] || []).map((f) => ({ file: f.filename, group: g.key, name: f.originalname, pdf: f.mimetype === 'application/pdf' }))) });
 
   if (!stripe) {
     db.markPaid(sub.ref);
@@ -156,6 +161,11 @@ app.use('/admin', adminAuth);
 app.use('/admin/photos', express.static(UPLOADS));
 
 const vehicle = (d) => [d.year, d.make, d.model, d.trim].filter(Boolean).join(' ');
+// Groups an order's uploads by box; orders from before the boxes existed have plain filenames.
+function uploadGroups(photos) {
+  const list = photos.map((p) => (typeof p === 'string' ? { file: p, group: 'vehicle', name: p, pdf: /\.pdf$/i.test(p) } : p));
+  return UPLOAD_GROUPS.map((g) => ({ label: g.label, items: list.filter((p) => p.group === g.key) })).filter((g) => g.items.length);
+}
 const regLabel = (d) => d.registered === 'yes'
   ? `<span class="badge after">After registering · ${esc(d.registered_date)}</span>`
   : '<span class="badge before">Before registering</span>';
@@ -202,7 +212,7 @@ app.get('/admin', (req, res) => {
       <td><a href="/admin/sub/${s.id}">${esc(s.ref)}</a></td>
       <td>${esc(s.created_at.slice(0, 16))}</td>
       <td>${esc(s.name)}<br><small>${esc(s.email)}</small></td>
-      <td><a href="/admin/sub/${s.id}">${esc(vehicle(s.data))}</a><br><small>${esc(s.data.condition)} · ${s.photos.length} photos</small><br>${regLabel(s.data)}</td>
+      <td><a href="/admin/sub/${s.id}">${esc(vehicle(s.data))}</a><br><small>${esc(s.data.condition)} · ${s.photos.length} files</small><br>${regLabel(s.data)}</td>
       <td>${esc(Number(s.data.odometer).toLocaleString())} ${esc(s.data.odometer_unit || 'km')}</td>
       <td>${money(s.data.purchase_price)}</td>
       <td>${status === 'paid' ? approveForm(s, true) : status === 'completed' ? money(s.appraised_value) : '—'}</td>
@@ -239,8 +249,11 @@ app.get('/admin/sub/:id', (req, res) => {
         ${d.registered === 'yes' ? `<p class="muted">Already registered: the FIN 355/MV refund application ${fs.existsSync(path.join(__dirname, '..', 'templates', 'fin-355mv.pdf')) ? `will be filled in and attached (estimated refund ${money(refundEstimate(s, s.appraised_value ?? d.purchase_price))}).` : '<b class="warn">won\'t be attached. Upload it to templates/fin-355mv.pdf.</b>'}</p>` : ''}
       </section>
     </div>
-    <h2>Photos (${s.photos.length})</h2>
-    <div class="photos">${s.photos.map((p) => `<a href="/admin/photos/${esc(p)}" target="_blank"><img src="/admin/photos/${esc(p)}" loading="lazy"></a>`).join('')}</div>
+    <h2>Photos and documents (${s.photos.length})</h2>
+    ${uploadGroups(s.photos).map(({ label, items }) => `<h3 class="up-h">${esc(label)} <small>(${items.length})</small></h3>
+    <div class="photos">${items.map((p) => p.pdf
+      ? `<a class="pdf-tile" href="/admin/photos/${esc(p.file)}" target="_blank"><b>PDF</b><span>${esc(p.name)}</span></a>`
+      : `<a href="/admin/photos/${esc(p.file)}" target="_blank"><img src="/admin/photos/${esc(p.file)}" alt="${esc(p.name)}" loading="lazy"></a>`).join('')}</div>`).join('')}
     ${confirmScript}`));
 });
 

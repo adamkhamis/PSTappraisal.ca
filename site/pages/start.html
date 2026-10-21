@@ -88,10 +88,58 @@
       </fieldset>
 
       <fieldset>
-        <legend>Photos*</legend>
-        <p class="hint">At least 4, up to 20. Include the front, back, both sides, interior, the odometer with the engine on, and close-ups of every problem. Photos of repair quotes help too.</p>
-        <label class="drop"><input id="photos" name="photos" type="file" accept="image/*" multiple required><span><b>Choose photos</b> or drag them here</span></label>
-        <div id="previews" class="previews"></div>
+        <legend>Photos and documents</legend>
+        <p class="hint">Clear photos help us appraise the vehicle accurately and support a lower value. Boxes marked <span class="req">Required</span> must have at least one file. Photos or PDFs, up to 15 MB each.</p>
+        <div class="uploads">
+          <div class="up-box" data-group="vehicle" data-required>
+            <div class="up-head"><b>Vehicle photos</b><span class="req">Required</span></div>
+            <p>Outside and inside the vehicle and the odometer, at least 4. Include the front, back, both sides, the interior and the odometer with the engine on.</p>
+            <label class="drop small-drop"><input type="file" name="vehicle" accept="image/*" multiple><span><b>Add files</b> or drag them here</span></label>
+            <div class="previews"></div>
+          </div>
+          <div class="up-box" data-group="damage">
+            <div class="up-head"><b>Any visible damage, wear or imperfections</b><span class="opt-tag">Optional</span></div>
+            <p>Dents, scratches, rust, cracked glass, worn tires, tears or stains. Take a close-up and a wider shot of each.</p>
+            <label class="drop small-drop"><input type="file" name="damage" accept="image/*" multiple><span><b>Add files</b> or drag them here</span></label>
+            <div class="previews"></div>
+          </div>
+          <div class="up-box" data-group="mechanical">
+            <div class="up-head"><b>Photos of any mechanical issues</b><span class="opt-tag">Optional</span></div>
+            <p>Dashboard warning lights, leaks, smoke, or anything a mechanic pointed out.</p>
+            <label class="drop small-drop"><input type="file" name="mechanical" accept="image/*" multiple><span><b>Add files</b> or drag them here</span></label>
+            <div class="previews"></div>
+          </div>
+          <div class="up-box" data-group="quotes">
+            <div class="up-head"><b>Any repair quotations</b><span class="opt-tag">Optional</span></div>
+            <p>Written quotes or invoices from a mechanic or body shop. A photo or PDF.</p>
+            <label class="drop small-drop"><input type="file" name="quotes" accept="image/*,application/pdf" multiple><span><b>Add files</b> or drag them here</span></label>
+            <div class="previews"></div>
+          </div>
+          <div class="up-box" data-group="apv9t" data-required>
+            <div class="up-head"><b>Completed APV9T Transfer/Tax form</b><span class="req">Required</span></div>
+            <p>The Transfer/Tax form signed by you and the seller. A photo of each page or a PDF.</p>
+            <label class="drop small-drop"><input type="file" name="apv9t" accept="image/*,application/pdf" multiple><span><b>Add files</b> or drag them here</span></label>
+            <div class="previews"></div>
+          </div>
+          <div class="up-box" data-group="registration" data-required>
+            <div class="up-head"><b>Current vehicle registration</b><span class="req">Required</span></div>
+            <p>The vehicle's current registration (the seller's if you haven't registered yet). A photo or PDF.</p>
+            <label class="drop small-drop"><input type="file" name="registration" accept="image/*,application/pdf" multiple><span><b>Add files</b> or drag them here</span></label>
+            <div class="previews"></div>
+          </div>
+          <div class="up-box" data-group="vin" data-required>
+            <div class="up-head"><b>Clear photo of the VIN</b><span class="req">Required</span></div>
+            <p>The VIN plate on the dashboard (seen through the windshield) or the sticker on the driver's door frame. Make sure all 17 characters are readable.</p>
+            <label class="drop small-drop"><input type="file" name="vin" accept="image/*" multiple><span><b>Add files</b> or drag them here</span></label>
+            <div class="previews"></div>
+          </div>
+          <div class="up-box" data-group="carfax">
+            <div class="up-head"><b>CARFAX report (if applicable)</b><span class="opt-tag">Optional</span></div>
+            <p>If you have a CARFAX or other vehicle history report, add it here. A PDF or screenshots.</p>
+            <label class="drop small-drop"><input type="file" name="carfax" accept="image/*,application/pdf" multiple><span><b>Add files</b> or drag them here</span></label>
+            <div class="previews"></div>
+          </div>
+        </div>
       </fieldset>
 
       <label class="agree"><input type="checkbox" name="agree" required> I confirm the information and photos are accurate and of the vehicle described. I understand the appraisal reflects the vehicle's real condition and may be equal to or higher than my purchase price, and I agree to the <a href="/terms" target="_blank">terms of service</a>.</label>
