@@ -48,8 +48,8 @@ const OUT = process.env.OUT || '/home/user/appraisal-app/marketing/business-card
   .back .eyebrow { font: 700 5.6pt Archivo, Arial; letter-spacing: .08em; white-space: nowrap; text-transform: uppercase; color: #1456a8; }
   .back h2 { margin-top: 2px; font: 800 11.2pt/1.06 Archivo, Arial; letter-spacing: -.012em; color: #0c2a52; }
   .back h2 span { color: #0f7a4a; }
-  .steps { margin-top: 6px; display: grid; gap: 3px; }
-  .steps div { display: flex; align-items: center; gap: 5px; font-size: 7.2pt; line-height: 1.15; }
+  .steps { margin-top: 5px; display: grid; gap: 2.5px; }
+  .steps div { display: flex; align-items: center; gap: 5px; font-size: 6.9pt; line-height: 1.12; }
   .steps i { font: 800 6.3pt Archivo, Arial; font-style: normal; width: 10.5pt; height: 10.5pt; border-radius: 50%; background: #e6eef9; color: #1456a8; display: grid; place-items: center; flex: none; }
   .steps b { font-weight: 700; }
   .example { margin-top: auto; background: #e1f4ea; color: #0b5e39; border-radius: 4px; padding: 3px 6px; font-size: 6.4pt; line-height: 1.25; }
@@ -114,6 +114,7 @@ const OUT = process.env.OUT || '/home/user/appraisal-app/marketing/business-card
         <div><i>1</i><span><b>Send the VIN &amp; photos</b> from your phone</span></div>
         <div><i>2</i><span><b>We appraise</b> its real condition</span></div>
         <div><i>3</i><span><b>Signed FIN 320 emailed</b> within 1 hour</span></div>
+        <div><i>4</i><span><b>Bring it to ICBC</b>, or mail it to the Ministry of Finance with the FIN 355/MV</span></div>
       </div>
       <div class="example">e.g. Black Book <b>$13,900</b>, paid <b>$8,200</b><br>→ save up to <b>$684 in PST</b></div>
     </div></div>
