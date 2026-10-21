@@ -97,7 +97,7 @@ const OUT = process.env.OUT || '/home/user/appraisal-app/marketing/business-card
     </div>
     <div class="bottom">
       <div class="contact">
-        <div>${icon.phone}604.635.3867</div>
+        <div>${icon.phone}+1 (604) 635-3867</div>
         <div>${icon.mail}Support@PSTAppraisal.ca</div>
         <div>${icon.web}PSTappraisal.ca</div>
       </div>
