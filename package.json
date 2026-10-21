@@ -2,9 +2,9 @@
   "name": "pst-appraisal-bc",
   "version": "1.0.0",
   "description": "",
-  "main": "src/server.js",
+  "main": "app.js",
   "scripts": {
-    "start": "node src/server.js",
+    "start": "node app.js",
     "fields": "node --no-warnings src/list-fields.js",
     "build:preview": "node src/export-static.js docs --preview"
   },

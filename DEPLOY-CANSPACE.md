@@ -95,6 +95,18 @@ The FIN 320 and FIN 355/MV forms are already included in `templates/`.
 ## 7. Test it
 - Visit https://pstappraisal.ca, place an order with a Stripe test card first if you like (use test keys), check it appears at https://pstappraisal.ca/admin, approve it, and confirm the email arrives.
 
+## If your cPanel has "Application Manager" instead of "Setup Node.js App"
+cPanel's own Node.js support (cPanel docs: *How to Install a Node.js Application*) works too. Your host must first install
+Node.js (EasyApache 4 packages `ea-nodejs` and `ea-ruby27-mod_passenger` / `ea-apache24-mod_env`) and turn on the
+**Application Manager** feature for your account.
+1. Copy the code with **Git™ Version Control** (step 2 above).
+2. cPanel → **Software → Application Manager → Register Application**:
+   Application Name `pstappraisal`, Deployment Domain `pstappraisal.ca`, Base Application URL `/`,
+   Application Path `pstappraisal`, Deployment Environment `Production`.
+3. Add the environment variables from step 3 in the same form, then **Deploy**.
+4. Click **Ensure dependencies** next to the app to install its packages.
+The app's entry file is `app.js` in the repository root, which is what Application Manager expects.
+
 ## Updating the site later
 When new changes are pushed to GitHub:
 1. cPanel → **Git™ Version Control** → **Manage** → **Pull or Deploy** → **Update from Remote**
