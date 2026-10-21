@@ -52,8 +52,8 @@ Click **Create**, then scroll to **Environment variables** and add each of these
 | `MAIL_FROM` | `PST Appraisal BC <support@pstappraisal.ca>` |
 | `MAIL_BCC` | `support@pstappraisal.ca` |
 | `COMPANY_NAME` | `PST Appraisal BC` |
-| `COMPANY_ADDRESS` | your business address |
-| `COMPANY_PHONE` | `Support@PSTAppraisal.ca` or a phone number |
+| `COMPANY_ADDRESS` | `PMB 56117, 915 E Cordova St, Vancouver, BC V6A 4B8` |
+| `COMPANY_PHONE` | `604.635.3867` |
 | `APPRAISER_NAME` | your name |
 | `APPRAISER_LICENSE` | your dealer registration / appraiser number |
 

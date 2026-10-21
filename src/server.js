@@ -121,6 +121,8 @@ app.post('/api/submit', upload.array('photos', 20), async (req, res) => {
   }
 });
 
+app.get('/before-or-after', (req, res) => res.redirect(301, '/ways-to-use-it'));
+
 // Resume payment if they cancelled out of Stripe
 app.get('/pay/:ref', async (req, res) => {
   const sub = db.byRef(req.params.ref);

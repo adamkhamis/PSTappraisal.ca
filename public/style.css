@@ -395,3 +395,9 @@ small .badge, td .badge { display:inline-block; margin-top:4px; }
 .example-card .compare dt { font-size:.96rem; color:var(--muted); }
 .tool-grid.three { grid-template-columns:repeat(3,1fr); }
 @media (max-width:960px) { .tool-grid.three { grid-template-columns:1fr; } }
+.site-foot p a { display:block; }
+.foot-addr { font-size:.88rem; color:#9fb2cc; }
+.contact-cards { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:24px; }
+.contact-cards div { background:var(--tint); border-radius:12px; padding:18px; display:flex; flex-direction:column; gap:4px; font-weight:600; }
+.contact-cards a { text-decoration:none; }
+@media (max-width:760px) { .contact-cards { grid-template-columns:1fr; } }
