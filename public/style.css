@@ -422,3 +422,13 @@ small .badge, td .badge { display:inline-block; margin-top:4px; }
 .pdf-tile { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; aspect-ratio:4/3; border-radius:8px; background:#fff; border:1px solid var(--line); text-decoration:none; padding:10px; text-align:center; }
 .pdf-tile b { color:#b3261e; } .pdf-tile span { font-size:.8rem; color:var(--muted); overflow-wrap:anywhere; }
 @media (max-width:700px) { .uploads { grid-template-columns:1fr; } }
+
+/* Call buttons in the header */
+.call-btn svg, .call-mobile svg { width:16px; height:16px; fill:currentColor; flex:none; }
+.nav nav .call-btn { padding:7px 16px; border-width:2px; margin-right:-10px; }
+.call-mobile { display:none; }
+@media (max-width:1180px) { .nav nav { gap:14px; } .nav nav a:not(.btn) { font-size:.9rem; } }
+@media (max-width:960px) {
+  .nav nav .call-btn { display:none; }
+  .call-mobile { display:inline-flex; align-items:center; gap:6px; margin-left:auto; background:var(--accent); color:#fff; border-radius:999px; padding:8px 14px; font:700 .9rem var(--display); text-decoration:none; }
+}
