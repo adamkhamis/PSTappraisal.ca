@@ -32,6 +32,8 @@ function fieldValues(sub, value, notes) {
     appraised_value: money(value),
     appraised_value_number: Number(value).toFixed(2),
     appraiser_notes: notes || '',
+    registered_date: d.registered_date || '',
+    pst_paid: d.pst_paid ? money(d.pst_paid) : '',
     appraiser_name: process.env.APPRAISER_NAME || '',
     appraiser_license: process.env.APPRAISER_LICENSE || '',
     company_name: process.env.COMPANY_NAME || '',
@@ -147,32 +149,42 @@ async function buildCertificate(sub, value, notes) {
   return Buffer.from(await pdf.save());
 }
 
-// Optional: fill an official fillable PDF (e.g. your province's appraisal form) if you drop one in /templates.
-// templates/field-map.json maps PDF field names -> keys from fieldValues(), e.g. { "VIN": "vin" }.
-async function buildOfficialForm(sub, value, notes) {
-  const formPath = path.join(TEMPLATES, 'official-form.pdf');
-  const mapPath = path.join(TEMPLATES, 'field-map.json');
-  if (!fs.existsSync(formPath) || !fs.existsSync(mapPath)) return null;
-  delete require.cache[mapPath];
+// Official government PDFs live in /templates. Each can have a <name>-map.json mapping PDF field names
+// to keys from fieldValues(), e.g. { "VIN": "vin" }. Run `npm run fields -- <file>.pdf` to list field names.
+const FORMS = {
+  // FIN 320 Motor Vehicle Appraisal: only attached once it's mapped, since we sign it. Flattened so it can't be edited.
+  fin320: { pdf: 'official-form.pdf', map: 'field-map.json', needsMap: true, flatten: process.env.FLATTEN_OFFICIAL_FORM !== 'false' },
+  // FIN 355/MV PST refund application: sent to clients who already registered. Pre-filled if mapped, left
+  // editable so the client can finish and sign it.
+  fin355: { pdf: 'fin-355mv.pdf', map: 'fin-355mv-map.json', needsMap: false, flatten: false },
+};
+
+async function buildOfficialForm(sub, value, notes, which = 'fin320') {
+  const cfg = FORMS[which];
+  const formPath = path.join(TEMPLATES, cfg.pdf);
+  const mapPath = path.join(TEMPLATES, cfg.map);
+  const hasMap = fs.existsSync(mapPath);
+  if (!fs.existsSync(formPath) || (cfg.needsMap && !hasMap)) return null;
+  const bytes = fs.readFileSync(formPath);
+  if (!hasMap) return bytes;
   const f = fieldValues(sub, value, notes);
   const map = JSON.parse(fs.readFileSync(mapPath, 'utf8'));
   delete map._README;
-  const pdf = await PDFDocument.load(fs.readFileSync(formPath));
+  const pdf = await PDFDocument.load(bytes);
   const form = pdf.getForm();
   for (const [pdfField, key] of Object.entries(map)) {
     try {
       const fld = form.getField(pdfField);
       if (fld.constructor.name === 'PDFCheckBox') { if (f[key]) fld.check(); }
       else fld.setText(String(f[key] ?? key)); // unknown key = literal text
-    } catch (e) { console.warn(`Field "${pdfField}" not found in official form`); }
+    } catch (e) { console.warn(`Field "${pdfField}" not found in ${cfg.pdf}`); }
   }
-  if (process.env.FLATTEN_OFFICIAL_FORM !== 'false') form.flatten();
+  if (cfg.flatten) form.flatten();
   return Buffer.from(await pdf.save());
 }
 
-async function listFormFields() {
-  const formPath = path.join(TEMPLATES, 'official-form.pdf');
-  const pdf = await PDFDocument.load(fs.readFileSync(formPath));
+async function listFormFields(file = 'official-form.pdf') {
+  const pdf = await PDFDocument.load(fs.readFileSync(path.join(TEMPLATES, file)));
   return pdf.getForm().getFields().map((f) => `${f.getName()}  (${f.constructor.name})`);
 }
 

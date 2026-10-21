@@ -235,6 +235,7 @@ app.get('/admin/sub/:id', (req, res) => {
       <section>
         <h2>Appraisal</h2>
         ${s.status === 'awaiting_payment' ? '<p class="warn">Not paid yet.</p>' : approveForm(s, false)}
+        ${d.registered === 'yes' ? `<p class="muted">Already registered: the FIN 355/MV refund application ${fs.existsSync(path.join(__dirname, '..', 'templates', 'fin-355mv.pdf')) ? 'will be attached to the email.' : '<b class="warn">won\'t be attached. Upload it to templates/fin-355mv.pdf.</b>'}</p>` : ''}
       </section>
     </div>
     <h2>Photos (${s.photos.length})</h2>
@@ -246,6 +247,11 @@ async function buildAttachments(sub, value, notes) {
   const files = [{ filename: `Appraisal-${sub.ref}.pdf`, content: await buildCertificate(sub, value, notes) }];
   const official = await buildOfficialForm(sub, value, notes);
   if (official) files.unshift({ filename: `FIN320-Motor-Vehicle-Appraisal-${sub.ref}.pdf`, content: official });
+  if (sub.data.registered === 'yes') {
+    const refund = await buildOfficialForm(sub, value, notes, 'fin355');
+    if (refund) files.push({ filename: `FIN355MV-PST-Refund-Application-${sub.ref}.pdf`, content: refund });
+    else console.warn(`[forms] ${sub.ref} registered already, but templates/fin-355mv.pdf is missing, so the refund form wasn't attached`);
+  }
   return files;
 }
 

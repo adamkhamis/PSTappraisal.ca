@@ -28,6 +28,8 @@ BC's appraisal form is **FIN 320, Motor Vehicle Appraisal** (gov.bc.ca → Taxes
 2. Run `npm run fields` to list its fillable field names.
 3. Copy `templates/field-map.example.json` to `templates/field-map.json` and map each PDF field to a data key.
 
+For clients who already registered, also save the FIN 355/MV as `templates/fin-355mv.pdf`. It's attached to their email automatically (pre-filled if you add `templates/fin-355mv-map.json`; list its fields with `npm run fields -- fin-355mv.pdf`).
+
 After that, every approval attaches the filled FIN 320 as well as the branded certificate. If the form needs a handwritten signature, put a PNG of your signature at `SIGNATURE_IMAGE`.
 
 ## Preview on GitHub Pages
