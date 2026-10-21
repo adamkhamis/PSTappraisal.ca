@@ -390,3 +390,6 @@ small .badge, td .badge { display:inline-block; margin-top:4px; }
   .bos input { border:0; border-bottom:1px solid #999; border-radius:0; padding:2px 0; }
   .bos .grid { gap:6px 16px; }
 }
+.example-card { box-shadow:0 18px 50px rgba(12,42,82,.1); border:1px solid var(--line); margin:8px 0 22px; }
+.example-card .compare { grid-template-columns:1fr; gap:0; }
+.example-card .compare dt { font-size:.96rem; color:var(--muted); }
