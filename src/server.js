@@ -9,7 +9,7 @@ const multer = require('multer');
 const db = require('./db');
 const { buildCertificate, buildFin320, buildFin355, refundEstimate, FIN_CONDITION, money, UPLOADS } = require('./pdf');
 const { sendAppraisal, sendContact, esc } = require('./mailer');
-const { renderPage, PAGES } = require('./pages');
+const { renderPage, PAGES, sitemapXml, robotsTxt } = require('./pages');
 const UPLOAD_GROUPS = require('./uploads');
 const { notifyNewOrder } = require('./notify');
 
@@ -73,6 +73,9 @@ function priceVars() {
 app.get(['/', ...PAGES.filter((p) => p !== 'index').map((p) => '/' + p)], (req, res) => {
   res.send(renderPage(req.path === '/' ? 'index' : req.path.slice(1), priceVars()));
 });
+
+app.get('/sitemap.xml', (req, res) => res.type('application/xml').send(sitemapXml()));
+app.get('/robots.txt', (req, res) => res.type('text/plain').send(robotsTxt()));
 
 app.post('/api/contact', express.json(), async (req, res) => {
   const { name, email, ref, message } = req.body || {};
@@ -184,7 +187,7 @@ function adminAuth(req, res, next) {
   if (process.env.ADMIN_PASSWORD && ok(user, process.env.ADMIN_USER || 'admin') && ok(pass, process.env.ADMIN_PASSWORD)) return next();
   res.set('WWW-Authenticate', 'Basic realm="Admin"').status(401).send('Login required (set ADMIN_PASSWORD in .env)');
 }
-app.use('/admin', adminAuth);
+app.use('/admin', (req, res, next) => { res.set('X-Robots-Tag', 'noindex, nofollow'); next(); }, adminAuth);
 app.use('/admin/photos', express.static(UPLOADS));
 
 const vehicle = (d) => [d.year, d.make, d.model, d.trim].filter(Boolean).join(' ');
