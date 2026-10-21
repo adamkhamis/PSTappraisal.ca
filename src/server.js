@@ -117,6 +117,7 @@ app.post('/api/submit', upload.fields(UPLOAD_GROUPS.map((g) => ({ name: g.key, m
 
   const { name, email, agree, ...data } = b;
   data.province = 'BC';
+  if (data.registered !== 'yes') { delete data.registered_date; delete data.pst_paid; } // only for already-registered vehicles
   data.issues = [].concat(b.issues || []);
   const sub = db.create({ name: name.trim(), email: email.trim(), data, photos: UPLOAD_GROUPS.flatMap((g) => (files[g.key] || []).map((f) => ({ file: f.filename, group: g.key, name: f.originalname, pdf: f.mimetype === 'application/pdf' }))) });
 

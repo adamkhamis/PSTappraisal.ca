@@ -1,4 +1,5 @@
 /* Navy + road-sign green for savings. Archivo for headings, Source Sans 3 for reading. */
+[hidden] { display:none !important; }
 :root {
   --ink:#122036; --muted:#566377; --line:#dbe2eb; --bg:#ffffff; --tint:#f3f6fa; --card:#ffffff;
   --navy:#0c2a52; --accent:#1456a8; --accent-soft:#e6eef9; --save:#0f7a4a; --save-soft:#e1f4ea;

@@ -1,11 +1,14 @@
 const form = document.getElementById('appraisal'), err = document.getElementById('err');
 const regFields = document.getElementById('reg-fields'), regDate = form.registered_date;
 
-form.querySelectorAll('input[name=registered]').forEach((r) => r.addEventListener('change', () => {
+// Registration date and PST paid are only asked for when the vehicle is already registered.
+function syncRegistered() {
   const yes = form.registered.value === 'yes';
   regFields.hidden = !yes;
   regDate.required = yes;
-}));
+}
+form.querySelectorAll('input[name=registered]').forEach((r) => r.addEventListener('change', syncRegistered));
+syncRegistered();
 
 // Each upload box keeps its own list, so customers can add files in several goes and remove mistakes.
 const picked = {};
@@ -45,6 +48,7 @@ form.addEventListener('submit', async (e) => {
   try {
     const body = new FormData(form);
     for (const [key, files] of Object.entries(picked)) { body.delete(key); files.forEach((f) => body.append(key, f)); }
+    if (form.registered.value !== 'yes') { body.delete('registered_date'); body.delete('pst_paid'); }
     const res = await fetch('/api/submit', { method: 'POST', body });
     const json = await res.json();
     if (!res.ok) throw new Error(json.error || 'Something went wrong. Please try again.');
