@@ -52,7 +52,12 @@ Click **Create**, then scroll to **Environment variables** and add each of these
 | `MAIL_FROM` | `PST Appraisal BC <support@pstappraisal.ca>` |
 | `MAIL_BCC` | `support@pstappraisal.ca` |
 | `COMPANY_NAME` | `PST Appraisal BC` |
-| `COMPANY_ADDRESS` | `PMB 56117, 915 E Cordova St, Vancouver, BC V6A 4B8` |
+| `COMPANY_STREET` | `PMB 56117, 915 E Cordova St` |
+| `COMPANY_CITY` | `Vancouver` |
+| `COMPANY_PROVINCE` | `BC` |
+| `COMPANY_POSTAL` | `V6A 4B8` |
+| `BUSINESS_NUMBER` | CRA business number (optional) |
+| `PST_NUMBER` | BC PST number (optional) |
 | `COMPANY_PHONE` | `604.635.3867` |
 | `APPRAISER_NAME` | your name |
 | `APPRAISER_LICENSE` | your dealer registration / appraiser number |
@@ -69,10 +74,10 @@ Stripe Dashboard → **Developers → Webhooks → Add endpoint**
 
 Copy the **Signing secret** into `STRIPE_WEBHOOK_SECRET` (step 3) and **Restart** the app.
 
-## 6. Add your signature and the FIN 320 (optional, recommended)
-cPanel → **File Manager** → `pstappraisal/templates/`
-- Upload your signature as `signature.png` and add the variable `SIGNATURE_IMAGE` = `templates/signature.png`.
-- Upload the FIN 320 PDF as `official-form.pdf` (see README for mapping its fields).
+## 6. Add your signature
+cPanel → **File Manager** → `pstappraisal/templates/` → upload your signature as `signature.png` (a transparent PNG works best),
+then add the variable `SIGNATURE_IMAGE` = `templates/signature.png` and **Restart**. It's stamped on the FIN 320 and the certificate.
+The FIN 320 and FIN 355/MV forms are already included in `templates/`.
 
 ## 7. Test it
 - Visit https://pstappraisal.ca, place an order with a Stripe test card first if you like (use test keys), check it appears at https://pstappraisal.ca/admin, approve it, and confirm the email arrives.

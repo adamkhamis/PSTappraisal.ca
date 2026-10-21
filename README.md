@@ -22,15 +22,12 @@ Without Stripe keys, orders are marked paid with no charge (test mode). Without 
 - In Dashboard → Developers → Webhooks, add `https://pstappraisal.ca/webhook/stripe` for the `checkout.session.completed` event, then put its signing secret in `STRIPE_WEBHOOK_SECRET`.
 - Payment is also confirmed when the customer returns from Stripe, so the webhook is a backup.
 
-## Filling the official FIN 320 form
-BC's appraisal form is **FIN 320, Motor Vehicle Appraisal** (gov.bc.ca → Taxes → PST → Forms).
-1. Save it as `templates/official-form.pdf`.
-2. Run `npm run fields` to list its fillable field names.
-3. Copy `templates/field-map.example.json` to `templates/field-map.json` and map each PDF field to a data key.
+## Official forms
+`templates/official-form.pdf` (FIN 320) and `templates/fin-355mv.pdf` (FIN 355/MV) are the BC government forms. On approval:
+- the FIN 320 is filled in with your business details (from `.env`), the purchaser, vehicle, appraised value, condition and comments, and stamped with your signature if `SIGNATURE_IMAGE` is set;
+- clients who already registered also get the FIN 355/MV, pre-filled with their details and an estimated refund (refund reason 5), for them to check and sign.
 
-For clients who already registered, also save the FIN 355/MV as `templates/fin-355mv.pdf`. It's attached to their email automatically (pre-filled if you add `templates/fin-355mv-map.json`; list its fields with `npm run fields -- fin-355mv.pdf`).
-
-After that, every approval attaches the filled FIN 320 as well as the branded certificate. If the form needs a handwritten signature, put a PNG of your signature at `SIGNATURE_IMAGE`.
+The filled forms keep the government's original restrictions (printing, form filling and comments allowed). If the province releases a new version, replace the PDF and check the field names with `npm run fields` or `npm run fields -- fin-355mv.pdf`.
 
 ## Preview on GitHub Pages
 The `docs/` folder is a static copy of the public pages for previewing. Turn it on in GitHub under **Settings → Pages → Deploy from a branch → main / docs**. Rebuild it after changing pages with `npm run build:preview`. Ordering and the contact form only work on the full site.

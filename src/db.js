@@ -44,8 +44,8 @@ module.exports = {
     const r = rows.find((x) => x.ref === ref && x.status === 'awaiting_payment');
     if (r) { r.status = 'paid'; r.paid_at = now(); save(); }
   },
-  markCompleted(id, value, notes) {
+  markCompleted(id, value, notes, finCondition) {
     const r = rows.find((x) => x.id === id);
-    if (r) Object.assign(r, { status: 'completed', appraised_value: value, appraiser_notes: notes, completed_at: now() }), save();
+    if (r) Object.assign(r, { status: 'completed', appraised_value: value, appraiser_notes: notes, fin_condition: finCondition || r.fin_condition, completed_at: now() }), save();
   },
 };

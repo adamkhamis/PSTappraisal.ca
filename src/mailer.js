@@ -13,12 +13,14 @@ const transport = process.env.SMTP_HOST
     })
   : null;
 
-async function sendAppraisal(sub, valueText, attachments) {
+async function sendAppraisal(sub, valueText, attachments, refund = 0) {
   const company = process.env.COMPANY_NAME || 'PST Appraisal BC';
   const d = sub.data;
   const vehicle = [d.year, d.make, d.model].filter(Boolean).join(' ');
   const nextStep = d.registered === 'yes'
-    ? 'Next step: you registered on ' + d.registered_date + '. We\'ve also attached the PST refund application (FIN 355/MV). Complete and sign it, then send it to the BC Ministry of Finance with your FIN 320 appraisal, your registration papers and the Transfer/Tax form (APV9T) within 30 days of registering.'
+    ? 'Next step: you registered on ' + d.registered_date + '. We\'ve also attached the PST refund application (FIN 355/MV), filled in with your details' +
+      (refund ? ` and an estimated refund of $${refund.toLocaleString('en-CA', { minimumFractionDigits: 2 })}. Check that amount against the PST shown on your Transfer/Tax form` : '') +
+      '. Sign and date Part F, then mail it with copies of your Transfer/Tax form (APV9T), proof that you paid for the vehicle (for example a bank statement or cancelled cheque), this FIN 320 and your photo ID to: Ministry of Finance, Refund Section, Consumer Taxation Programs Branch, PO Box 9628 Stn Prov Govt, Victoria BC V8W 9N6. It must arrive within 30 days of the date you registered.'
     : 'Next step: bring this appraisal, the signed Transfer/Tax form (APV9T) and ID to any Autoplan broker when you register. PST is worked out on the higher of your purchase price and the appraised value.';
   const msg = {
     from: process.env.MAIL_FROM || process.env.SMTP_USER,

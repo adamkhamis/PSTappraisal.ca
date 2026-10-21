@@ -12,11 +12,11 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@cantoo/pdf-lib": "^2.11.1",
     "dotenv": "^18.0.8",
     "express": "^5.3.0",
     "multer": "^2.4.0",
     "nodemailer": "^10.1.7",
-    "pdf-lib": "^1.17.1",
     "stripe": "^23.0.0"
   },
   "private": true,

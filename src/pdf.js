@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
-const { PDFDocument, StandardFonts, rgb } = require('pdf-lib');
+const crypto = require('crypto');
+const { PDFDocument, PDFName, StandardFonts, rgb, pushGraphicsState, popGraphicsState, concatTransformationMatrix, drawObject } = require('@cantoo/pdf-lib');
 
 const UPLOADS = path.join(__dirname, '..', 'uploads');
 const TEMPLATES = path.join(__dirname, '..', 'templates');
@@ -37,7 +38,7 @@ function fieldValues(sub, value, notes) {
     appraiser_name: process.env.APPRAISER_NAME || '',
     appraiser_license: process.env.APPRAISER_LICENSE || '',
     company_name: process.env.COMPANY_NAME || '',
-    company_address: process.env.COMPANY_ADDRESS || '',
+    company_address: process.env.COMPANY_ADDRESS || [process.env.COMPANY_STREET, process.env.COMPANY_CITY, process.env.COMPANY_PROVINCE, process.env.COMPANY_POSTAL].filter(Boolean).join(', '),
     company_phone: process.env.COMPANY_PHONE || '',
   };
 }
@@ -126,7 +127,7 @@ async function buildCertificate(sub, value, notes) {
   y -= 82;
 
   const decl = `I certify that I have appraised the vehicle described above and that, in my professional opinion, ` +
-    `its fair market value as of ${f.date} is ${f.appraised_value}, based on its condition, mileage and the information provided.`;
+    `its expected retail value in a private sale as of ${f.date} is ${f.appraised_value}, based on its condition, mileage and the information provided.`;
   for (const line of wrap(decl, font, 9.5, W)) { text(line, M, y, { size: 9.5 }); y -= 13; }
 
   // Signature block pinned near bottom
@@ -149,43 +150,122 @@ async function buildCertificate(sub, value, notes) {
   return Buffer.from(await pdf.save());
 }
 
-// Official government PDFs live in /templates. Each can have a <name>-map.json mapping PDF field names
-// to keys from fieldValues(), e.g. { "VIN": "vin" }. Run `npm run fields -- <file>.pdf` to list field names.
-const FORMS = {
-  // FIN 320 Motor Vehicle Appraisal: only attached once it's mapped, since we sign it. Flattened so it can't be edited.
-  fin320: { pdf: 'official-form.pdf', map: 'field-map.json', needsMap: true, flatten: process.env.FLATTEN_OFFICIAL_FORM !== 'false' },
-  // FIN 355/MV PST refund application: sent to clients who already registered. Pre-filled if mapped, left
-  // editable so the client can finish and sign it.
-  fin355: { pdf: 'fin-355mv.pdf', map: 'fin-355mv-map.json', needsMap: false, flatten: false },
-};
+// ---------- Official BC forms (templates/official-form.pdf = FIN 320, templates/fin-355mv.pdf = FIN 355/MV) ----------
+// The government PDFs are protected but allow form filling. We fill the fields and save them with the same
+// restrictions (printing, filling and comments allowed; editing and copying not), so they stay the official form.
+const PERMISSIONS = { printing: 'highResolution', modifying: false, copying: false, annotating: true, fillingForms: true, contentAccessibility: true, documentAssembly: false };
 
-async function buildOfficialForm(sub, value, notes, which = 'fin320') {
-  const cfg = FORMS[which];
-  const formPath = path.join(TEMPLATES, cfg.pdf);
-  const mapPath = path.join(TEMPLATES, cfg.map);
-  const hasMap = fs.existsSync(mapPath);
-  if (!fs.existsSync(formPath) || (cfg.needsMap && !hasMap)) return null;
-  const bytes = fs.readFileSync(formPath);
-  if (!hasMap) return bytes;
-  const f = fieldValues(sub, value, notes);
-  const map = JSON.parse(fs.readFileSync(mapPath, 'utf8'));
-  delete map._README;
-  const pdf = await PDFDocument.load(bytes);
-  const form = pdf.getForm();
-  for (const [pdfField, key] of Object.entries(map)) {
-    try {
-      const fld = form.getField(pdfField);
-      if (fld.constructor.name === 'PDFCheckBox') { if (f[key]) fld.check(); }
-      else fld.setText(String(f[key] ?? key)); // unknown key = literal text
-    } catch (e) { console.warn(`Field "${pdfField}" not found in ${cfg.pdf}`); }
+const ymd = (d) => (d ? String(d).replace(/-/g, '/') : '');
+const amount = (n) => Number(n).toLocaleString('en-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const pstRate = (v) => (v >= 125000 ? 0.2 : 0.12); // BC private-sale passenger vehicle rates
+// FIN 320 only offers Good / Fair / Poor
+const FIN_CONDITION = { Excellent: 'Good', Good: 'Good', Fair: 'Fair', Poor: 'Poor', 'Not running': 'Poor' };
+const CONDITION_BOX = { Good: '1', Fair: '2', Poor: '3' };
+
+function company() {
+  const e = process.env;
+  return {
+    business: e.COMPANY_NAME || '', dealerNumber: e.APPRAISER_LICENSE || '', businessNumber: e.BUSINESS_NUMBER || '',
+    pstNumber: e.PST_NUMBER || '', contact: e.APPRAISER_NAME || '', street: e.COMPANY_STREET || '', city: e.COMPANY_CITY || '',
+    province: e.COMPANY_PROVINCE || 'BC', postal: e.COMPANY_POSTAL || '', phone: e.COMPANY_PHONE || '',
+  };
+}
+
+// Estimated refund: PST paid at registration minus PST on the higher of the price and the appraised value.
+function refundEstimate(sub, value) {
+  const d = sub.data, price = Number(d.purchase_price) || 0, bb = Number(d.black_book) || 0;
+  const paid = Number(d.pst_paid) || (bb > price ? bb * pstRate(bb) : 0);
+  const taxable = Math.max(price, value);
+  const due = taxable * pstRate(taxable);
+  return paid > due ? Math.round((paid - due) * 100) / 100 : 0;
+}
+
+async function loadForm(file) {
+  const formPath = path.join(TEMPLATES, file);
+  if (!fs.existsSync(formPath)) return null;
+  return PDFDocument.load(fs.readFileSync(formPath), { password: '' });
+}
+
+function fill(form, values) {
+  for (const [name, val] of Object.entries(values)) {
+    if (val === undefined || val === null || val === '') continue;
+    try { form.getTextField(name).setText(String(val)); } catch (e) { console.warn(`[forms] field ${name}: ${e.message}`); }
   }
-  if (cfg.flatten) form.flatten();
-  return Buffer.from(await pdf.save());
+}
+
+async function save(doc) {
+  doc.encrypt({ ownerPassword: crypto.randomBytes(24).toString('hex'), userPassword: '', permissions: PERMISSIONS });
+  return Buffer.from(await doc.save());
+}
+
+// Adds the appraiser's signature image as a stamp (a comment-type mark, which the form allows).
+async function addSignature(doc, page, rect) {
+  const sigPath = process.env.SIGNATURE_IMAGE && path.resolve(process.env.SIGNATURE_IMAGE);
+  if (!sigPath || !fs.existsSync(sigPath)) return;
+  const bytes = fs.readFileSync(sigPath);
+  const img = /\.png$/i.test(sigPath) ? await doc.embedPng(bytes) : await doc.embedJpg(bytes);
+  const { width, height } = img.scaleToFit(rect.w, rect.h);
+  const ctx = doc.context;
+  const ap = ctx.formXObject(
+    [pushGraphicsState(), concatTransformationMatrix(width, 0, 0, height, 0, 0), drawObject('Sig'), popGraphicsState()],
+    { BBox: [0, 0, width, height], Resources: { XObject: { Sig: img.ref } } },
+  );
+  const annot = ctx.register(ctx.obj({
+    Type: 'Annot', Subtype: 'Stamp', Name: 'Signature', F: 4, Contents: 'Appraiser signature',
+    Rect: [rect.x, rect.y, rect.x + width, rect.y + height], AP: { N: ctx.register(ap) },
+  }));
+  page.node.addAnnot(annot);
+}
+
+async function buildFin320(sub, value, notes, condition) {
+  const doc = await loadForm('official-form.pdf');
+  if (!doc) return null;
+  const d = sub.data, c = company(), today = ymd(new Date().toLocaleDateString('en-CA'));
+  const issues = [].concat(d.issues || []).filter(Boolean);
+  const comments = [notes, issues.length ? 'Reported: ' + issues.join(', ') + '.' : ''].filter(Boolean).join(' ');
+  const form = doc.getForm();
+  fill(form, {
+    'txtDealer/AppraiserName': c.business, txtDealerNumber: c.dealerNumber, txtBusinessNumber: c.businessNumber, txtPSTNumber: c.pstNumber,
+    txtContactName: c.contact, txtMailAddress: c.street, txtCity: c.city, txtProvA: c.province, txtCountry: 'Canada',
+    txtPostalCode: c.postal, txtContactPhone: c.phone,
+    txtPurchaserName: sub.name, txtPurchaserMailAddress: d.address, txtPurchaserCity: d.city, txtProvB: 'BC', txtCountry2: 'Canada',
+    txtPurchaserPostalCode: d.postal, txtPurchaserContactPhone: d.phone,
+    txtYear: d.year, txtMake: d.make, txtModel: d.model, txtTrim: d.trim, txtVIN: (d.vin || '').toUpperCase(),
+    txtAppraisalDate: today, txtAppraisedValue: amount(value),
+    txtOdometer: d.odometer ? `${Number(d.odometer).toLocaleString('en-CA')} ${d.odometer_unit || 'km'}` : '',
+    txtAppraiserComments: comments, txtAppraiserName: c.contact, txtDateSigned: today,
+  });
+  const box = CONDITION_BOX[condition || FIN_CONDITION[d.condition]];
+  if (box) {
+    // optCondition is one field with three boxes (/1 Good, /2 Fair, /3 Poor); tick one, clear the others.
+    const field = form.getCheckBox('optCondition').acroField;
+    const on = PDFName.of(box);
+    field.dict.set(PDFName.of('V'), on);
+    for (const w of field.getWidgets()) w.setAppearanceState(String(w.getOnValue()) === '/' + box ? on : PDFName.of('Off'));
+  }
+  await addSignature(doc, doc.getPages()[0], { x: 40, y: 20, w: 200, h: 30 });
+  return save(doc);
+}
+
+async function buildFin355(sub, value) {
+  const doc = await loadForm('fin-355mv.pdf');
+  if (!doc) return null;
+  const d = sub.data, refund = refundEstimate(sub, value);
+  fill(doc.getForm(), {
+    txtFullLegalName: sub.name, txtMailAddress: d.address, txtCity: d.city, txtProvA: 'BC', txtPostalCode: d.postal,
+    txtContactName: sub.name, txtContactPhone: d.phone,
+    txtAmount: refund ? amount(refund) : '', txtClaimPeriodTo: ymd(d.registered_date),
+    txtVIN: (d.vin || '').toUpperCase(), txtMakeModel: [d.make, d.model].filter(Boolean).join(' '), txtYear: d.year,
+    txtPurchasePrice: d.purchase_price ? amount(d.purchase_price) : '',
+    txtTaxAmount5: refund ? amount(refund) : '', // refund reason 5: paid PST on Black Book, FIN 320 obtained
+    txtSigningAuth: sub.name,
+  });
+  return save(doc);
 }
 
 async function listFormFields(file = 'official-form.pdf') {
-  const pdf = await PDFDocument.load(fs.readFileSync(path.join(TEMPLATES, file)));
-  return pdf.getForm().getFields().map((f) => `${f.getName()}  (${f.constructor.name})`);
+  const doc = await loadForm(file);
+  return doc.getForm().getFields().map((f) => `${f.getName()}  (${f.constructor.name})`);
 }
 
-module.exports = { buildCertificate, buildOfficialForm, listFormFields, fieldValues, money, UPLOADS };
+module.exports = { buildCertificate, buildFin320, buildFin355, refundEstimate, FIN_CONDITION, listFormFields, fieldValues, money, UPLOADS };

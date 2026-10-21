@@ -5,7 +5,7 @@ const crypto = require('crypto');
 const express = require('express');
 const multer = require('multer');
 const db = require('./db');
-const { buildCertificate, buildOfficialForm, money, UPLOADS } = require('./pdf');
+const { buildCertificate, buildFin320, buildFin355, refundEstimate, FIN_CONDITION, money, UPLOADS } = require('./pdf');
 const { sendAppraisal, sendContact, esc } = require('./mailer');
 const { renderPage, PAGES } = require('./pages');
 
@@ -174,7 +174,8 @@ function approveForm(sub, compact) {
   return `<form method="post" action="/admin/sub/${sub.id}/approve" class="${compact ? 'inline-approve' : 'approve'}"
      onsubmit="return confirmSend(this, ${Number(d.purchase_price) || 0})">
     <label>Appraised value ($)<input name="value" type="number" step="0.01" min="0" required value="${esc(value)}"></label>
-    ${compact ? '' : `<label>Appraiser notes (printed on certificate)<textarea name="notes" rows="3">${esc(sub.appraiser_notes || '')}</textarea></label>`}
+    ${compact ? '' : `<label>Condition on FIN 320<select name="condition">${['Good', 'Fair', 'Poor'].map((c) => `<option ${c === (sub.fin_condition || FIN_CONDITION[d.condition]) ? 'selected' : ''}>${c}</option>`).join('')}</select></label>
+    <label>Appraiser comments (printed on the FIN 320 and certificate)<textarea name="notes" rows="3">${esc(sub.appraiser_notes || '')}</textarea></label>`}
     <div class="btns">
       ${compact ? '' : `<button formaction="/admin/sub/${sub.id}/preview" formtarget="_blank" formnovalidate class="secondary" type="submit">Preview PDF</button>`}
       <button type="submit">${sub.status === 'completed' ? 'Re-send' : 'Approve & email'}</button>
@@ -235,7 +236,7 @@ app.get('/admin/sub/:id', (req, res) => {
       <section>
         <h2>Appraisal</h2>
         ${s.status === 'awaiting_payment' ? '<p class="warn">Not paid yet.</p>' : approveForm(s, false)}
-        ${d.registered === 'yes' ? `<p class="muted">Already registered: the FIN 355/MV refund application ${fs.existsSync(path.join(__dirname, '..', 'templates', 'fin-355mv.pdf')) ? 'will be attached to the email.' : '<b class="warn">won\'t be attached. Upload it to templates/fin-355mv.pdf.</b>'}</p>` : ''}
+        ${d.registered === 'yes' ? `<p class="muted">Already registered: the FIN 355/MV refund application ${fs.existsSync(path.join(__dirname, '..', 'templates', 'fin-355mv.pdf')) ? `will be filled in and attached (estimated refund ${money(refundEstimate(s, s.appraised_value ?? d.purchase_price))}).` : '<b class="warn">won\'t be attached. Upload it to templates/fin-355mv.pdf.</b>'}</p>` : ''}
       </section>
     </div>
     <h2>Photos (${s.photos.length})</h2>
@@ -243,14 +244,16 @@ app.get('/admin/sub/:id', (req, res) => {
     ${confirmScript}`));
 });
 
-async function buildAttachments(sub, value, notes) {
-  const files = [{ filename: `Appraisal-${sub.ref}.pdf`, content: await buildCertificate(sub, value, notes) }];
-  const official = await buildOfficialForm(sub, value, notes);
-  if (official) files.unshift({ filename: `FIN320-Motor-Vehicle-Appraisal-${sub.ref}.pdf`, content: official });
+async function buildAttachments(sub, value, notes, condition) {
+  const files = [];
+  const fin320 = await buildFin320(sub, value, notes, condition);
+  if (fin320) files.push({ filename: `FIN320-Motor-Vehicle-Appraisal-${sub.ref}.pdf`, content: fin320 });
+  else console.warn('[forms] templates/official-form.pdf (FIN 320) is missing');
+  files.push({ filename: `Appraisal-Certificate-${sub.ref}.pdf`, content: await buildCertificate(sub, value, notes) });
   if (sub.data.registered === 'yes') {
-    const refund = await buildOfficialForm(sub, value, notes, 'fin355');
-    if (refund) files.push({ filename: `FIN355MV-PST-Refund-Application-${sub.ref}.pdf`, content: refund });
-    else console.warn(`[forms] ${sub.ref} registered already, but templates/fin-355mv.pdf is missing, so the refund form wasn't attached`);
+    const fin355 = await buildFin355(sub, value);
+    if (fin355) files.push({ filename: `FIN355MV-PST-Refund-Application-${sub.ref}.pdf`, content: fin355 });
+    else console.warn(`[forms] ${sub.ref} already registered, but templates/fin-355mv.pdf is missing`);
   }
   return files;
 }
@@ -259,7 +262,7 @@ app.post('/admin/sub/:id/preview', async (req, res) => {
   const s = db.byId(req.params.id);
   if (!s) return res.sendStatus(404);
   const value = Number(req.body.value) || 0;
-  const [first] = await buildAttachments(s, value, req.body.notes);
+  const [first] = await buildAttachments(s, value, req.body.notes, req.body.condition);
   res.type('pdf').set('Content-Disposition', `inline; filename="${first.filename}"`).send(first.content);
 });
 
@@ -270,12 +273,12 @@ app.post('/admin/sub/:id/approve', async (req, res) => {
   if (!(value > 0)) return res.status(400).send('Enter a valid appraised value.');
   const notes = req.body.notes ?? s.appraiser_notes ?? '';
   try {
-    await sendAppraisal(s, money(value), await buildAttachments(s, value, notes));
+    await sendAppraisal(s, money(value), await buildAttachments(s, value, notes, req.body.condition), s.data.registered === 'yes' ? refundEstimate(s, value) : 0);
   } catch (e) {
     console.error(e);
     return res.status(500).send(layout('Error', `<p class="warn">Email failed: ${esc(e.message)}</p><p><a href="/admin/sub/${s.id}">Back</a></p>`));
   }
-  db.markCompleted(s.id, value, notes);
+  db.markCompleted(s.id, value, notes, req.body.condition);
   res.redirect(`/admin?sent=${s.ref}`);
 });
 
