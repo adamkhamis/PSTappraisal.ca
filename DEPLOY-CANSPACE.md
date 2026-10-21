@@ -60,6 +60,11 @@ Click **Create**, then scroll to **Environment variables** and add each of these
 | `PST_NUMBER` | BC PST number (optional) |
 | `COMPANY_PHONE` | `604.635.3867` |
 | `APPRAISER_NAME` | your name |
+| `NOTIFY_EMAIL` | `adam@khamis.ca` |
+| `VOIPMS_API_USERNAME` | your voip.ms login email |
+| `VOIPMS_API_PASSWORD` | your voip.ms API password (see step 5b) |
+| `VOIPMS_DID` | `6046353867` |
+| `NOTIFY_SMS_TO` | `6044185518` |
 | `APPRAISER_LICENSE` | your dealer registration / appraiser number |
 
 Click **Save**, then **Run NPM Install**, then **Restart**.
@@ -73,6 +78,14 @@ Stripe Dashboard → **Developers → Webhooks → Add endpoint**
 - Event: `checkout.session.completed`
 
 Copy the **Signing secret** into `STRIPE_WEBHOOK_SECRET` (step 3) and **Restart** the app.
+
+## 5b. Text alerts with voip.ms
+Each new paid order sends a text from 604.635.3867 to your mobile. In the voip.ms portal:
+1. **DID Numbers → Manage DIDs →** edit 604-635-3867 and turn on **SMS/MMS**.
+2. **Main Menu → SOAP and REST/JSON API**: set an **API password**, click **Enable/Disable API** to enable it, and in **Enable IP Addresses** add your CanSpace server's IP address (cPanel shows it as *Shared IP Address* on the right side of the home page; or ask CanSpace support).
+3. Put the API password in `VOIPMS_API_PASSWORD` (step 3) and **Restart** the app.
+
+If a text fails, the reason is written to the app's log (cPanel → Setup Node.js App → your app → log file), and the email alert still goes out.
 
 ## 6. Add your signature
 cPanel → **File Manager** → `pstappraisal/templates/` → upload your signature as `signature.png` (a transparent PNG works best),

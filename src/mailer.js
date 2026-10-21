@@ -64,6 +64,18 @@ async function sendContact({ name, email, ref, message }) {
   await transport.sendMail(msg);
 }
 
+// Generic send, used for owner notifications. Without SMTP the message is saved to output/<saveAs>.txt.
+async function sendMail(msg, saveAs) {
+  const full = { from: process.env.MAIL_FROM || process.env.SMTP_USER, ...msg };
+  if (!transport) {
+    fs.mkdirSync(OUTPUT, { recursive: true });
+    fs.writeFileSync(path.join(OUTPUT, `${saveAs || Date.now()}.txt`), `To: ${full.to}\nSubject: ${full.subject}\n\n${full.text}`);
+    console.log(`[mail] SMTP not configured — saved "${full.subject}" to output/`);
+    return;
+  }
+  await transport.sendMail(full);
+}
+
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-module.exports = { sendAppraisal, sendContact, esc };
+module.exports = { sendAppraisal, sendContact, sendMail, esc };

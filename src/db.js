@@ -42,7 +42,9 @@ module.exports = {
   },
   markPaid(ref) {
     const r = rows.find((x) => x.ref === ref && x.status === 'awaiting_payment');
-    if (r) { r.status = 'paid'; r.paid_at = now(); save(); }
+    if (!r) return null; // unknown, or already marked paid (Stripe can confirm the same payment twice)
+    r.status = 'paid'; r.paid_at = now(); save();
+    return copy(r);
   },
   markCompleted(id, value, notes, finCondition) {
     const r = rows.find((x) => x.id === id);

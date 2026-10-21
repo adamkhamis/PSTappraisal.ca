@@ -9,6 +9,13 @@ const { buildCertificate, buildFin320, buildFin355, refundEstimate, FIN_CONDITIO
 const { sendAppraisal, sendContact, esc } = require('./mailer');
 const { renderPage, PAGES } = require('./pages');
 const UPLOAD_GROUPS = require('./uploads');
+const { notifyNewOrder } = require('./notify');
+
+// Marks an order paid and, the first time only, emails and texts you about it.
+function paid(ref) {
+  const sub = db.markPaid(ref);
+  if (sub) notifyNewOrder(sub).catch((e) => console.error('[notify]', e.message));
+}
 
 const PORT = process.env.PORT || 3000;
 const BASE_URL = (process.env.BASE_URL || `http://localhost:${PORT}`).replace(/\/$/, '');
@@ -31,7 +38,7 @@ app.post('/webhook/stripe', express.raw({ type: 'application/json' }), (req, res
     return res.status(400).send(`Webhook error: ${e.message}`);
   }
   if (event.type === 'checkout.session.completed' && event.data.object.payment_status === 'paid') {
-    db.markPaid(event.data.object.client_reference_id);
+    paid(event.data.object.client_reference_id);
   }
   res.json({ received: true });
 });
@@ -95,7 +102,7 @@ app.post('/api/submit', upload.fields(UPLOAD_GROUPS.map((g) => ({ name: g.key, m
   const sub = db.create({ name: name.trim(), email: email.trim(), data, photos: UPLOAD_GROUPS.flatMap((g) => (files[g.key] || []).map((f) => ({ file: f.filename, group: g.key, name: f.originalname, pdf: f.mimetype === 'application/pdf' }))) });
 
   if (!stripe) {
-    db.markPaid(sub.ref);
+    paid(sub.ref);
     return res.json({ url: `/thank-you?ref=${sub.ref}` });
   }
   try {
@@ -143,7 +150,7 @@ app.get('/success', async (req, res) => {
   if (!stripe || !req.query.session_id) return res.redirect('/');
   try {
     const session = await stripe.checkout.sessions.retrieve(String(req.query.session_id));
-    if (session.payment_status === 'paid') db.markPaid(session.client_reference_id);
+    if (session.payment_status === 'paid') paid(session.client_reference_id);
     res.redirect(`/thank-you?ref=${encodeURIComponent(session.client_reference_id)}`);
   } catch {
     res.redirect('/');
