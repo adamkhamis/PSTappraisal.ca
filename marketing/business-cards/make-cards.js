@@ -10,6 +10,7 @@ const OUT = process.env.OUT || '/home/user/appraisal-app/marketing/business-card
     mail: '<svg viewBox="0 0 24 24"><path d="M3 5h18a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zm1 2.2V17h16V7.2l-8 5.3z"/></svg>',
     web: '<svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm6.9 6h-3a15.6 15.6 0 0 0-1.4-3.6A8 8 0 0 1 18.9 8zM12 4c.8 1.1 1.5 2.5 1.9 4h-3.8c.4-1.5 1.1-2.9 1.9-4zM4.3 14a8.2 8.2 0 0 1 0-4h3.4a16.5 16.5 0 0 0 0 4zm.8 2h3a15.6 15.6 0 0 0 1.4 3.6A8 8 0 0 1 5.1 16zm3-8h-3a8 8 0 0 1 4.4-3.6A15.6 15.6 0 0 0 8.1 8zM12 20c-.8-1.1-1.5-2.5-1.9-4h3.8c-.4 1.5-1.1 2.9-1.9 4zm2.3-6H9.7a14.6 14.6 0 0 1 0-4h4.6a14.6 14.6 0 0 1 0 4zm.2 5.6a15.6 15.6 0 0 0 1.4-3.6h3a8 8 0 0 1-4.4 3.6zm1.8-5.6a16.5 16.5 0 0 0 0-4h3.4a8.2 8.2 0 0 1 0 4z"/></svg>',
     check: '<svg viewBox="0 0 24 24"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg>',
+    online: '<svg viewBox="0 0 24 24"><path d="M4 5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zm1 2v8h14V7zM2 19h20v1.5H2z"/></svg>',
     clock: '<svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 10.4 3.5 2.1-.8 1.3L11 13V7h2z"/></svg>',
   };
 
@@ -26,15 +27,15 @@ const OUT = process.env.OUT || '/home/user/appraisal-app/marketing/business-card
   .logo { display: flex; align-items: center; gap: 5px; font: 800 12pt Archivo, Arial; letter-spacing: -.01em; }
   .mark { background: #fff; color: #1456a8; border-radius: 4px; padding: 1px 5px; font-size: 9.5pt; letter-spacing: .03em; }
   .logo b { color: #8fe0b4; }
-  .tag { margin-top: 0.08in; font: 800 14pt/1.05 Archivo, Arial; letter-spacing: -.015em; }
+  .tag { margin-top: 0.06in; font: 800 13pt/1.03 Archivo, Arial; letter-spacing: -.015em; }
   .tag em { font-style: normal; color: #8fe0b4; }
-  .badges { display: flex; gap: 4px; margin-top: 5px; flex-wrap: wrap; }
+  .badges { display: flex; flex-direction: column; align-items: flex-start; gap: 2.5px; margin-top: 4px; }
   .badge { display: inline-flex; align-items: center; gap: 3px; font: 700 6.3pt Archivo, Arial; letter-spacing: .02em; text-transform: uppercase;
-           border: 0.6pt solid rgba(143,224,180,.65); color: #d9f5e6; border-radius: 99px; padding: 1.5px 6px 1.5px 4px; }
+           border: 0.6pt solid rgba(143,224,180,.65); color: #d9f5e6; border-radius: 99px; padding: 1.2px 6px 1.2px 4px; }
   .badge svg { width: 6.5pt; height: 6.5pt; fill: #8fe0b4; }
   .art { position: absolute; right: 0.24in; top: 0.24in; width: 1.22in; height: auto; }
   .bottom { margin-top: auto; display: flex; justify-content: space-between; align-items: flex-end; gap: 8px; }
-  .contact { display: grid; gap: 2px; font-size: 7.8pt; font-weight: 600; }
+  .contact { display: grid; gap: 1.5px; font-size: 7.6pt; font-weight: 600; }
   .contact div { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
   .contact svg { width: 7.5pt; height: 7.5pt; fill: #8fe0b4; flex: none; }
   .legal { text-align: right; font-size: 5.9pt; line-height: 1.3; color: #b9c9e0; }
@@ -94,6 +95,7 @@ const OUT = process.env.OUT || '/home/user/appraisal-app/marketing/business-card
     <div class="badges">
       <span class="badge">${icon.check}Professional vehicle appraiser</span>
       <span class="badge">${icon.clock}Report delivered within 1 hour</span>
+      <span class="badge">${icon.online}Fully online · No shop visit required</span>
     </div>
     <div class="bottom">
       <div class="contact">
