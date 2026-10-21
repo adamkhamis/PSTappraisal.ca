@@ -32,40 +32,16 @@ cPanel → **Setup Node.js App** → **Create Application**
 | Application URL | `pstappraisal.ca` |
 | Application startup file | `src/server.js` |
 
-Click **Create**, then scroll to **Environment variables** and add each of these (**Add Variable**):
+Click **Create**, then scroll to **Environment variables** and add just these three (**Add Variable**):
 
 | Name | Value |
 |---|---|
 | `BASE_URL` | `https://pstappraisal.ca` |
 | `ADMIN_USER` | `admin` (or any username) |
 | `ADMIN_PASSWORD` | a long, strong password |
-| `PRICE_CENTS` | `7000` |
-| `TAX_PERCENT` | `5` (or `0` if you're not registered for GST) |
-| `TAX_NAME` | `GST` |
-| `TAX_NUMBER` | your GST number, if you have one |
-| `STRIPE_SECRET_KEY` | from Stripe → Developers → API keys (`sk_live_…`) |
-| `STRIPE_WEBHOOK_SECRET` | from step 5 (`whsec_…`) |
-| `SMTP_HOST` | `mail.pstappraisal.ca` |
-| `SMTP_PORT` | `465` |
-| `SMTP_USER` | `support@pstappraisal.ca` |
-| `SMTP_PASS` | the email password from step 1 |
-| `MAIL_FROM` | `PST Appraisal BC <support@pstappraisal.ca>` |
-| `MAIL_BCC` | `support@pstappraisal.ca` |
-| `COMPANY_NAME` | `PST Appraisal BC` |
-| `COMPANY_STREET` | `PMB 56117, 915 E Cordova St` |
-| `COMPANY_CITY` | `Vancouver` |
-| `COMPANY_PROVINCE` | `BC` |
-| `COMPANY_POSTAL` | `V6A 4B8` |
-| `BUSINESS_NUMBER` | CRA business number (optional) |
-| `PST_NUMBER` | BC PST number (optional) |
-| `COMPANY_PHONE` | `604.635.3867` |
-| `APPRAISER_NAME` | your name |
-| `NOTIFY_EMAIL` | `adam@khamis.ca` |
-| `VOIPMS_API_USERNAME` | your voip.ms login email |
-| `VOIPMS_API_PASSWORD` | your voip.ms API password (see step 5b) |
-| `VOIPMS_DID` | `6046353867` |
-| `NOTIFY_SMS_TO` | `6044185518` |
-| `APPRAISER_LICENSE` | your dealer registration / appraiser number |
+
+Everything else (your FIN 320 details, signature, price, Stripe, email and text alerts) is entered later in the
+admin portal under **Settings**.
 
 Click **Save**, then **Run NPM Install**, then **Restart**.
 
@@ -77,20 +53,20 @@ Stripe Dashboard → **Developers → Webhooks → Add endpoint**
 - Endpoint URL: `https://pstappraisal.ca/webhook/stripe`
 - Event: `checkout.session.completed`
 
-Copy the **Signing secret** into `STRIPE_WEBHOOK_SECRET` (step 3) and **Restart** the app.
+Copy the **Signing secret** into **Admin → Settings → Stripe payments → Webhook signing secret** and click **Save settings**.
 
 ## 5b. Text alerts with voip.ms
 Each new paid order sends a text from 604.635.3867 to your mobile. In the voip.ms portal:
 1. **DID Numbers → Manage DIDs →** edit 604-635-3867 and turn on **SMS/MMS**.
 2. **Main Menu → SOAP and REST/JSON API**: set an **API password**, click **Enable/Disable API** to enable it, and in **Enable IP Addresses** add your CanSpace server's IP address (cPanel shows it as *Shared IP Address* on the right side of the home page; or ask CanSpace support).
-3. Put the API password in `VOIPMS_API_PASSWORD` (step 3) and **Restart** the app.
+3. Enter your voip.ms login email and API password in **Admin → Settings → New order alerts**, save, and click **Send a test text**.
 
 If a text fails, the reason is written to the app's log (cPanel → Setup Node.js App → your app → log file), and the email alert still goes out.
 
-## 6. Add your signature
-cPanel → **File Manager** → `pstappraisal/templates/` → upload your signature as `signature.png` (a transparent PNG works best),
-then add the variable `SIGNATURE_IMAGE` = `templates/signature.png` and **Restart**. It's stamped on the FIN 320 and the certificate.
-The FIN 320 and FIN 355/MV forms are already included in `templates/`.
+## 6. Fill in Settings
+Go to `https://pstappraisal.ca/admin/settings` and fill in your FIN 320 details, upload your signature, and enter your
+Stripe, email and voip.ms details. Click **Save settings**, then use **Send a test email** and **Send a test text**.
+Changes apply immediately; no restart needed.
 
 ## 7. Test it
 - Visit https://pstappraisal.ca, place an order with a Stripe test card first if you like (use test keys), check it appears at https://pstappraisal.ca/admin, approve it, and confirm the email arrives.
@@ -103,7 +79,7 @@ Node.js (EasyApache 4 packages `ea-nodejs` and `ea-ruby27-mod_passenger` / `ea-a
 2. cPanel → **Software → Application Manager → Register Application**:
    Application Name `pstappraisal`, Deployment Domain `pstappraisal.ca`, Base Application URL `/`,
    Application Path `pstappraisal`, Deployment Environment `Production`.
-3. Add the environment variables from step 3 in the same form, then **Deploy**.
+3. Add the three environment variables from step 3 (`BASE_URL`, `ADMIN_USER`, `ADMIN_PASSWORD`) in the same form, then **Deploy**.
 4. Click **Ensure dependencies** next to the app to install its packages.
 The app's entry file is `app.js` in the repository root, which is what Application Manager expects.
 

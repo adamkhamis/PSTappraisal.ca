@@ -2,6 +2,9 @@
 
 A website for BC private-sale vehicle PST appraisals. Customers fill in the vehicle details, upload photos and pay with Stripe. You review each order in `/admin`, approve or change the value in one click, and the client gets the PDF appraisal by email.
 
+## Settings
+Only `BASE_URL`, `ADMIN_USER` and `ADMIN_PASSWORD` need to be set on the server. Everything else (FIN 320 details, signature, price and tax, Stripe, email, new-order alerts) is entered at **/admin/settings** and saved in `data/settings.json`. Values saved there override environment variables.
+
 ## Run it locally
 ```bash
 npm install

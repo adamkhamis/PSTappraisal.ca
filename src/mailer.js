@@ -4,14 +4,24 @@ const nodemailer = require('nodemailer');
 
 const OUTPUT = path.join(__dirname, '..', 'output');
 
-const transport = process.env.SMTP_HOST
-  ? nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT || 587),
-      secure: Number(process.env.SMTP_PORT) === 465,
-      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-    })
-  : null;
+// Rebuilt whenever the email settings change in Admin → Settings. null = no server set, save emails to output/.
+let cached = { key: null, transport: null };
+function getTransport() {
+  const e = process.env;
+  const key = [e.SMTP_HOST, e.SMTP_PORT, e.SMTP_USER, e.SMTP_PASS].join('|');
+  if (cached.key !== key) {
+    cached = {
+      key,
+      transport: e.SMTP_HOST ? nodemailer.createTransport({
+        host: e.SMTP_HOST,
+        port: Number(e.SMTP_PORT || 587),
+        secure: Number(e.SMTP_PORT) === 465,
+        auth: { user: e.SMTP_USER, pass: e.SMTP_PASS },
+      }) : null,
+    };
+  }
+  return cached.transport;
+}
 
 async function sendAppraisal(sub, valueText, attachments, refund = 0) {
   const company = process.env.COMPANY_NAME || 'PST Appraisal BC';
@@ -36,6 +46,7 @@ async function sendAppraisal(sub, valueText, attachments, refund = 0) {
     attachments,
   };
 
+  const transport = getTransport();
   if (!transport) {
     // No SMTP configured: save to /output so you can check what would have been sent.
     fs.mkdirSync(OUTPUT, { recursive: true });
@@ -55,6 +66,7 @@ async function sendContact({ name, email, ref, message }) {
     subject: `Website message from ${name}${ref ? ' (' + ref + ')' : ''}`,
     text: `From: ${name} <${email}>\nOrder ref: ${ref || '—'}\n\n${message}`,
   };
+  const transport = getTransport();
   if (!transport) {
     fs.mkdirSync(OUTPUT, { recursive: true });
     fs.writeFileSync(path.join(OUTPUT, `contact-${Date.now()}.txt`), `To: ${msg.to}\nSubject: ${msg.subject}\n\n${msg.text}`);
@@ -67,6 +79,7 @@ async function sendContact({ name, email, ref, message }) {
 // Generic send, used for owner notifications. Without SMTP the message is saved to output/<saveAs>.txt.
 async function sendMail(msg, saveAs) {
   const full = { from: process.env.MAIL_FROM || process.env.SMTP_USER, ...msg };
+  const transport = getTransport();
   if (!transport) {
     fs.mkdirSync(OUTPUT, { recursive: true });
     fs.writeFileSync(path.join(OUTPUT, `${saveAs || Date.now()}.txt`), `To: ${full.to}\nSubject: ${full.subject}\n\n${full.text}`);

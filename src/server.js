@@ -1,4 +1,6 @@
 require('dotenv').config();
+const settings = require('./settings');
+settings.load(); // business settings saved in Admin → Settings
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
@@ -19,17 +21,27 @@ function paid(ref) {
 
 const PORT = process.env.PORT || 3000;
 const BASE_URL = (process.env.BASE_URL || `http://localhost:${PORT}`).replace(/\/$/, '');
-const PRICE_CENTS = Number(process.env.PRICE_CENTS || 7000);
-const TAX_PERCENT = Number(process.env.TAX_PERCENT ?? 5); // GST. Set to 0 if you're not registered for GST.
-const TAX_NAME = process.env.TAX_NAME || 'GST';
-const TAX_CENTS = Math.round(PRICE_CENTS * TAX_PERCENT / 100);
-const stripe = process.env.STRIPE_SECRET_KEY ? require('stripe')(process.env.STRIPE_SECRET_KEY) : null;
-if (!stripe) console.warn('[stripe] STRIPE_SECRET_KEY not set — TEST MODE: submissions are marked paid without charging.');
+// Price and tax come from Admin → Settings, so they're read on every request.
+function pricing() {
+  const cents = Number(process.env.PRICE_CENTS || 7000);
+  const pct = Number(process.env.TAX_PERCENT ?? 5);
+  return { cents, pct, name: process.env.TAX_NAME || 'GST', tax: Math.round(cents * pct / 100) };
+}
+
+// Stripe client for the current secret key; null = test mode (orders skip payment).
+let stripeCache = { key: null, client: null };
+function getStripe() {
+  const key = process.env.STRIPE_SECRET_KEY || '';
+  if (stripeCache.key !== key) stripeCache = { key, client: key ? require('stripe')(key) : null };
+  return stripeCache.client;
+}
+if (!getStripe()) console.warn('[stripe] No Stripe secret key — TEST MODE: submissions are marked paid without charging.');
 
 const app = express();
 
 // ---------- Stripe webhook (needs raw body, so it goes before express.json) ----------
 app.post('/webhook/stripe', express.raw({ type: 'application/json' }), (req, res) => {
+  const stripe = getStripe();
   if (!stripe) return res.sendStatus(400);
   let event;
   try {
@@ -47,15 +59,19 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
 // ---------- Public pages (site/pages/*.html, e.g. /faq, /how-it-works) ----------
-const PRICE_VARS = {
-  price_amount: money(PRICE_CENTS / 100).replace('.00', ''),
-  price: money(PRICE_CENTS / 100).replace('.00', ''),
-  tax_name: TAX_NAME,
-  tax_line: TAX_CENTS ? `+ ${money(TAX_CENTS / 100)} ${TAX_NAME} (${TAX_PERCENT}%) = ${money((PRICE_CENTS + TAX_CENTS) / 100)} total` : 'No tax added',
-  fee_total: String((PRICE_CENTS + TAX_CENTS) / 100),
-};
+function priceVars() {
+  const p = pricing();
+  const amount = money(p.cents / 100).replace('.00', '');
+  return {
+    price_amount: amount,
+    price: amount,
+    tax_name: p.name,
+    tax_line: p.tax ? `+ ${money(p.tax / 100)} ${p.name} (${p.pct}%) = ${money((p.cents + p.tax) / 100)} total` : 'No tax added',
+    fee_total: String((p.cents + p.tax) / 100),
+  };
+}
 app.get(['/', ...PAGES.filter((p) => p !== 'index').map((p) => '/' + p)], (req, res) => {
-  res.send(renderPage(req.path === '/' ? 'index' : req.path.slice(1), PRICE_VARS));
+  res.send(renderPage(req.path === '/' ? 'index' : req.path.slice(1), priceVars()));
 });
 
 app.post('/api/contact', express.json(), async (req, res) => {
@@ -101,10 +117,12 @@ app.post('/api/submit', upload.fields(UPLOAD_GROUPS.map((g) => ({ name: g.key, m
   data.issues = [].concat(b.issues || []);
   const sub = db.create({ name: name.trim(), email: email.trim(), data, photos: UPLOAD_GROUPS.flatMap((g) => (files[g.key] || []).map((f) => ({ file: f.filename, group: g.key, name: f.originalname, pdf: f.mimetype === 'application/pdf' }))) });
 
+  const stripe = getStripe();
   if (!stripe) {
     paid(sub.ref);
     return res.json({ url: `/thank-you?ref=${sub.ref}` });
   }
+  const p = pricing();
   try {
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
@@ -115,12 +133,12 @@ app.post('/api/submit', upload.fields(UPLOAD_GROUPS.map((g) => ({ name: g.key, m
         quantity: 1,
         price_data: {
           currency: 'cad',
-          unit_amount: PRICE_CENTS,
+          unit_amount: p.cents,
           product_data: { name: 'FIN 320 PST Vehicle Appraisal', description: `${data.year} ${data.make} ${data.model} – VIN ${data.vin}` },
         },
-      }].concat(TAX_CENTS ? [{
+      }].concat(p.tax ? [{
         quantity: 1,
-        price_data: { currency: 'cad', unit_amount: TAX_CENTS, product_data: { name: `${TAX_NAME} (${TAX_PERCENT}%)`, description: process.env.TAX_NUMBER ? `${TAX_NAME} #${process.env.TAX_NUMBER}` : undefined } },
+        price_data: { currency: 'cad', unit_amount: p.tax, product_data: { name: `${p.name} (${p.pct}%)`, description: process.env.TAX_NUMBER ? `${p.name} #${process.env.TAX_NUMBER}` : undefined } },
       }] : []),
       success_url: `${BASE_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${BASE_URL}/start?cancelled=1`,
@@ -138,6 +156,7 @@ app.get('/before-or-after', (req, res) => res.redirect(301, '/ways-to-use-it'));
 // Resume payment if they cancelled out of Stripe
 app.get('/pay/:ref', async (req, res) => {
   const sub = db.byRef(req.params.ref);
+  const stripe = getStripe();
   if (!sub || !stripe) return res.redirect('/');
   if (sub.status !== 'awaiting_payment') return res.redirect(`/thank-you?ref=${sub.ref}`);
   const session = await stripe.checkout.sessions.retrieve(sub.stripe_session_id);
@@ -147,6 +166,7 @@ app.get('/pay/:ref', async (req, res) => {
 
 // Confirms payment on return from Stripe too (so it works even before the webhook is set up)
 app.get('/success', async (req, res) => {
+  const stripe = getStripe();
   if (!stripe || !req.query.session_id) return res.redirect('/');
   try {
     const session = await stripe.checkout.sessions.retrieve(String(req.query.session_id));
@@ -181,7 +201,7 @@ const STATUS_LABEL = { paid: 'Ready to review', completed: 'Sent', awaiting_paym
 function layout(title, body) {
   return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <title>${esc(title)}</title><link rel="stylesheet" href="/style.css"></head>
-  <body class="admin"><header class="admin-bar"><a href="/admin"><b>${esc(process.env.COMPANY_NAME || 'PST Appraisal BC')}</b> · Admin</a></header>
+  <body class="admin"><header class="admin-bar"><a href="/admin"><b>${esc(process.env.COMPANY_NAME || 'PST Appraisal BC')}</b> · Admin</a><nav><a href="/admin">Orders</a><a href="/admin/settings">Settings</a></nav></header>
   <main class="wrap">${body}</main></body></html>`;
 }
 
@@ -300,6 +320,100 @@ app.post('/admin/sub/:id/approve', async (req, res) => {
   }
   db.markCompleted(s.id, value, notes, req.body.condition);
   res.redirect(`/admin?sent=${s.ref}`);
+});
+
+// ---------- Admin → Settings ----------
+const { sendMail } = require('./mailer');
+const { sendSms } = require('./notify');
+const signatureUpload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => { fs.mkdirSync(settings.dir, { recursive: true }); cb(null, settings.dir); },
+    filename: (req, file, cb) => cb(null, 'signature' + (file.mimetype === 'image/png' ? '.png' : '.jpg')),
+  }),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => cb(null, ['image/png', 'image/jpeg'].includes(file.mimetype)),
+});
+
+function settingsPage(flash = '') {
+  const e = process.env;
+  const field = (f) => {
+    const id = 'set-' + f.key;
+    const help = f.help ? `<small>${f.help.replace('{BASE_URL}', esc(BASE_URL))}</small>` : '';
+    if (f.type === 'secret') {
+      const isSet = Boolean(e[f.key]);
+      return `<label for="${id}"><span>${esc(f.label)} <span class="pill ${isSet ? 'on' : ''}">${isSet ? 'Saved' : 'Not set'}</span></span>
+        <input id="${id}" name="${f.key}" type="password" autocomplete="new-password" placeholder="${isSet ? 'Leave blank to keep the saved one' : ''}">${help}
+        ${isSet ? `<span class="clear"><input type="checkbox" name="clear_${f.key}" id="clear-${f.key}"><label for="clear-${f.key}">Remove</label></span>` : ''}</label>`;
+    }
+    const value = f.type === 'money' ? (Number(e[f.key] || 0) / 100).toFixed(2) : (e[f.key] || '');
+    const type = f.type === 'money' || f.type === 'number' ? 'number' : f.type === 'email' ? 'text' : 'text';
+    return `<label for="${id}">${esc(f.label)}<input id="${id}" name="${f.key}" type="${type}" ${f.type === 'money' ? 'step="0.01" min="0"' : ''} value="${esc(value)}" placeholder="${esc(f.placeholder || '')}">${help}</label>`;
+  };
+  const sig = e.SIGNATURE_IMAGE && fs.existsSync(path.resolve(e.SIGNATURE_IMAGE));
+  return layout('Settings', `
+    <h1>Settings</h1>
+    <p class="muted">Changes take effect as soon as you save. No restart needed.</p>
+    ${flash}
+    <form method="post" action="/admin/settings" enctype="multipart/form-data" class="settings">
+      ${settings.GROUPS.map((g) => `<section class="set-group"><h2>${esc(g.title)}</h2>${g.note ? `<p class="muted">${esc(g.note)}</p>` : ''}
+        <div class="set-grid">${g.fields.map(field).join('')}</div>
+        ${g.title === 'Your details on the FIN 320' ? `<div class="sig-row"><label for="sig">Signature (stamped on the FIN 320 and certificate)
+          <input id="sig" name="signature" type="file" accept="image/png,image/jpeg"><small>A PNG with a transparent background looks best.</small></label>
+          ${sig ? `<img src="/admin/settings/signature?${Date.now()}" alt="Saved signature" class="sig-preview">` : '<span class="pill">No signature yet</span>'}</div>` : ''}
+      </section>`).join('')}
+      <div class="set-actions"><button type="submit">Save settings</button></div>
+    </form>
+    <section class="set-group"><h2>Test</h2>
+      <p class="muted">Save first, then check your email and text alerts work.</p>
+      <form method="post" action="/admin/settings/test" class="row-btns">
+        <button name="what" value="email" class="secondary">Send a test email to ${esc(e.NOTIFY_EMAIL || 'the alert address')}</button>
+        <button name="what" value="sms" class="secondary">Send a test text to ${esc(e.NOTIFY_SMS_TO || 'your mobile')}</button>
+      </form>
+    </section>
+    <p class="muted">Site address, admin username and admin password are set on the server (BASE_URL, ADMIN_USER, ADMIN_PASSWORD).</p>`);
+}
+
+app.get('/admin/settings', (req, res) => {
+  const msg = { saved: 'Settings saved.', email: 'Test email sent. Check your inbox.', sms: 'Test text sent.' }[req.query.ok];
+  res.send(settingsPage(msg ? `<p class="flash">${msg}</p>` : req.query.err ? `<p class="warn">${esc(req.query.err)}</p>` : ''));
+});
+
+app.post('/admin/settings', signatureUpload.single('signature'), (req, res) => {
+  const changes = {};
+  for (const f of settings.FIELDS) {
+    if (!(f.key in req.body)) continue;
+    let v = String(req.body[f.key]).trim();
+    if (f.type === 'secret') {
+      if (req.body['clear_' + f.key]) changes[f.key] = null;
+      else if (v) changes[f.key] = v; // blank = keep the saved one
+      continue;
+    }
+    if (f.type === 'money') v = v ? String(Math.round(parseFloat(v) * 100)) : '';
+    changes[f.key] = v;
+  }
+  if (req.file) changes.SIGNATURE_IMAGE = req.file.path;
+  settings.save(changes);
+  res.redirect('/admin/settings?ok=saved');
+});
+
+app.get('/admin/settings/signature', (req, res) => {
+  const p = process.env.SIGNATURE_IMAGE && path.resolve(process.env.SIGNATURE_IMAGE);
+  if (!p || !fs.existsSync(p)) return res.sendStatus(404);
+  res.sendFile(p);
+});
+
+app.post('/admin/settings/test', async (req, res) => {
+  try {
+    if (req.body.what === 'sms') {
+      await sendSms(`Test text from ${process.env.COMPANY_NAME || 'PST Appraisal BC'}. Order alerts will arrive like this.`, true);
+    } else {
+      if (!process.env.NOTIFY_EMAIL) throw new Error('Enter an address under "Email new orders to" first.');
+      await sendMail({ to: process.env.NOTIFY_EMAIL, subject: 'Test email from your appraisal site', text: 'Your email settings work. New order alerts and appraisals will be sent from this account.' }, 'test-email');
+    }
+    res.redirect('/admin/settings?ok=' + (req.body.what === 'sms' ? 'sms' : 'email'));
+  } catch (e) {
+    res.redirect('/admin/settings?err=' + encodeURIComponent('Test failed: ' + e.message));
+  }
 });
 
 app.listen(PORT, () => console.log(`Running at ${BASE_URL}  (admin: ${BASE_URL}/admin)`));

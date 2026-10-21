@@ -432,3 +432,25 @@ small .badge, td .badge { display:inline-block; margin-top:4px; }
   .nav nav .call-btn { display:none; }
   .call-mobile { display:inline-flex; align-items:center; gap:6px; margin-left:auto; background:var(--accent); color:#fff; border-radius:999px; padding:8px 14px; font:700 .9rem var(--display); text-decoration:none; }
 }
+
+/* Admin settings */
+.admin-bar { display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap; }
+.admin-bar nav { display:flex; gap:18px; }
+.admin-bar nav a { color:#c9d8ee; font-weight:600; }
+.admin-bar nav a:hover { color:#fff; }
+.settings { display:grid; gap:18px; }
+.set-group { background:#fff; border-radius:12px; padding:22px; margin-bottom:18px; }
+.set-group h2 { font-size:1.1rem; color:var(--accent); margin-bottom:4px; }
+.set-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px 18px; margin-top:14px; }
+.set-grid label, .sig-row label { font-size:.9rem; }
+.set-grid small, .sig-row small { font-weight:400; color:var(--muted); font-size:.8rem; }
+.pill { display:inline-block; font-size:.7rem; font-weight:700; padding:2px 8px; border-radius:999px; background:var(--tint); color:var(--muted); margin-left:6px; vertical-align:middle; }
+.pill.on { background:var(--save-soft); color:var(--save); }
+.clear { display:flex; gap:6px; align-items:center; font-weight:400; font-size:.82rem; color:var(--muted); }
+.clear input { width:auto; }
+.sig-row { display:flex; gap:18px; align-items:flex-end; flex-wrap:wrap; margin-top:16px; border-top:1px dashed var(--line); padding-top:16px; }
+.sig-preview { max-height:60px; background:repeating-conic-gradient(#f2f4f7 0 25%, #fff 0 50%) 0 0/14px 14px; border:1px solid var(--line); border-radius:6px; padding:4px; }
+.set-actions { position:sticky; bottom:0; background:var(--bg); padding:12px 0; }
+.set-actions button, .set-group .row-btns button { background:var(--accent); color:#fff; border:0; border-radius:8px; padding:12px 22px; font-weight:700; cursor:pointer; }
+.set-group .row-btns button.secondary { background:#fff; color:var(--accent); border:1px solid var(--accent); }
+@media (max-width:700px) { .set-grid { grid-template-columns:1fr; } }

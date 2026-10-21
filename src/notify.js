@@ -4,9 +4,12 @@ const { sendMail } = require('./mailer');
 const BASE_URL = () => (process.env.BASE_URL || `http://localhost:${process.env.PORT || 3000}`).replace(/\/$/, '');
 const money = (n) => '$' + Number(n || 0).toLocaleString('en-CA');
 
-async function sendSms(text) {
+async function sendSms(text, mustSend = false) {
   const { VOIPMS_API_USERNAME: user, VOIPMS_API_PASSWORD: pass, VOIPMS_DID: did, NOTIFY_SMS_TO: to } = process.env;
-  if (!user || !pass || !did || !to) return console.log('[sms] voip.ms not configured, skipped:', text);
+  if (!user || !pass || !did || !to) {
+    if (mustSend) throw new Error('Fill in the voip.ms login email, API password and both phone numbers first.');
+    return console.log('[sms] voip.ms not configured, skipped:', text);
+  }
   const url = new URL('https://voip.ms/api/v1/rest.php');
   // voip.ms numbers are 10 digits with no punctuation; SMS is limited to 160 characters.
   const params = { api_username: user, api_password: pass, method: 'sendSMS', did: did.replace(/\D/g, '').slice(-10), dst: to.replace(/\D/g, '').slice(-10), message: text.slice(0, 160) };
