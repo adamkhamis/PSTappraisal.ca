@@ -18,8 +18,8 @@ async function sendAppraisal(sub, valueText, attachments) {
   const d = sub.data;
   const vehicle = [d.year, d.make, d.model].filter(Boolean).join(' ');
   const nextStep = d.registered === 'yes'
-    ? 'Next step: you registered on ' + d.registered_date + '. Fill in the PST refund application (FIN 355/MV) from the BC government PST forms page, attach this appraisal, your registration papers and the bill of sale, and send it to the Ministry of Finance within 30 days of registering.'
-    : 'Next step: bring this appraisal, your bill of sale, the signed Transfer/Tax form (APV9T) and ID to any Autoplan broker when you register. PST is worked out on the higher of your purchase price and the appraised value.';
+    ? 'Next step: you registered on ' + d.registered_date + '. Fill in the PST refund application (FIN 355/MV) from the BC government PST forms page, attach this appraisal, your registration papers and the Transfer/Tax form (APV9T), and send it to the Ministry of Finance within 30 days of registering.'
+    : 'Next step: bring this appraisal, the signed Transfer/Tax form (APV9T) and ID to any Autoplan broker when you register. PST is worked out on the higher of your purchase price and the appraised value.';
   const msg = {
     from: process.env.MAIL_FROM || process.env.SMTP_USER,
     to: sub.email,
