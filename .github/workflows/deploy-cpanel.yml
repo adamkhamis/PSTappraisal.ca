@@ -1,0 +1,37 @@
+# After every push to main, tells cPanel to pull the new code and run .cpanel.yml (install + restart).
+# Needs these repository secrets (Settings → Secrets and variables → Actions):
+#   CPANEL_HOST   your cPanel address, e.g. server123.canspace.ca (no https://, no port)
+#   CPANEL_USER   your cPanel username, e.g. kingsto2
+#   CPANEL_TOKEN  an API token from cPanel → Security → Manage API Tokens
+# Optional: CPANEL_REPO_PATH (default /home2/<user>/apps/pstappraisal)
+name: Deploy to cPanel
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pull and deploy on cPanel
+        env:
+          HOST: ${{ secrets.CPANEL_HOST }}
+          USER: ${{ secrets.CPANEL_USER }}
+          TOKEN: ${{ secrets.CPANEL_TOKEN }}
+          REPO: ${{ secrets.CPANEL_REPO_PATH }}
+        run: |
+          if [ -z "$HOST" ] || [ -z "$USER" ] || [ -z "$TOKEN" ]; then
+            echo "::warning::cPanel secrets aren't set yet, skipping deploy."; exit 0
+          fi
+          REPO="${REPO:-/home2/$USER/apps/pstappraisal}"
+          api() {
+            out=$(curl -sS --fail-with-body -H "Authorization: cpanel $USER:$TOKEN" "https://$HOST:2083/execute/$1" "${@:2}")
+            echo "$out"
+            echo "$out" | grep -q '"status":1' || { echo "::error::cPanel $1 failed"; exit 1; }
+          }
+          echo "Pulling latest code into $REPO"
+          api VersionControl/update --data-urlencode "repository_root=$REPO" --data-urlencode "branch=main" -G
+          echo "Running .cpanel.yml deployment"
+          api VersionControlDeployment/create --data-urlencode "repository_root=$REPO" -G

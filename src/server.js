@@ -363,7 +363,15 @@ function settingsPage(flash = '') {
       </section>`).join('')}
       <div class="set-actions"><button type="submit">Save settings</button></div>
     </form>
-    <section class="set-group"><h2>Test</h2>
+    <section class="set-group"><h2>Sample forms</h2>
+      <p class="muted">See the forms filled in with your saved details and an example customer. Save your changes first. Nothing is sent.</p>
+      <div class="row-btns">
+        <a class="btn-link" href="/admin/settings/sample/fin-320" target="_blank">Sample FIN 320</a>
+        <a class="btn-link" href="/admin/settings/sample/fin-355mv" target="_blank">Sample FIN 355/MV</a>
+        <a class="btn-link" href="/admin/settings/sample/certificate" target="_blank">Sample certificate</a>
+      </div>
+    </section>
+    <section class="set-group"><h2>Test alerts</h2>
       <p class="muted">Save first, then check your email and text alerts work.</p>
       <form method="post" action="/admin/settings/test" class="row-btns">
         <button name="what" value="email" class="secondary">Send a test email to ${esc(e.NOTIFY_EMAIL || 'the alert address')}</button>
@@ -400,6 +408,26 @@ app.get('/admin/settings/signature', (req, res) => {
   const p = process.env.SIGNATURE_IMAGE && path.resolve(process.env.SIGNATURE_IMAGE);
   if (!p || !fs.existsSync(p)) return res.sendStatus(404);
   res.sendFile(p);
+});
+
+// Sample forms filled with your saved settings and an example customer, so you can check them before a real order.
+const SAMPLE_ORDER = {
+  id: 0, ref: 'VA-SAMPLE', name: 'Example Customer', email: 'customer@example.com',
+  data: {
+    phone: '604-555-0123', address: '123 Example St', city: 'Surrey', postal: 'V3T 1A1', registered: 'yes', registered_date: new Date().toISOString().slice(0, 10),
+    vin: '2HGFC2F59JH512345', year: '2018', make: 'Honda', model: 'Civic', trim: 'LX', colour: 'Black', odometer: '236400', odometer_unit: 'km',
+    purchase_price: '8200', black_book: '13900', sale_date: new Date().toISOString().slice(0, 10), seller_name: 'Example Seller', condition: 'Fair',
+    issues: ['High kilometres', 'Warning lights on'],
+  },
+  photos: [],
+};
+app.get('/admin/settings/sample/:form', async (req, res) => {
+  const notes = 'Sample comments: check-engine light on, catalytic converter quoted at $1,800.';
+  const build = { 'fin-320': () => buildFin320(SAMPLE_ORDER, 8200, notes, 'Fair'), 'fin-355mv': () => buildFin355(SAMPLE_ORDER, 8200), certificate: () => buildCertificate(SAMPLE_ORDER, 8200, notes) }[req.params.form];
+  if (!build) return res.sendStatus(404);
+  const pdf = await build();
+  if (!pdf) return res.status(404).send('That form template is missing from templates/.');
+  res.type('pdf').set('Content-Disposition', `inline; filename="SAMPLE-${req.params.form}.pdf"`).send(pdf);
 });
 
 app.post('/admin/settings/test', async (req, res) => {

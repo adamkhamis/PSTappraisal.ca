@@ -1,0 +1,6 @@
+---
+# Run by cPanel's Git™ Version Control "Deploy" (and by the GitHub workflow after each push).
+# The app runs straight from this repository folder, so deploying just installs packages and restarts it.
+deployment:
+  tasks:
+    - /bin/bash $HOME/apps/pstappraisal/scripts/cpanel-deploy.sh

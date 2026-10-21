@@ -83,10 +83,20 @@ Node.js (EasyApache 4 packages `ea-nodejs` and `ea-ruby27-mod_passenger` / `ea-a
 4. Click **Ensure dependencies** next to the app to install its packages.
 The app's entry file is `app.js` in the repository root, which is what Application Manager expects.
 
-## Updating the site later
-When new changes are pushed to GitHub:
-1. cPanel → **Git™ Version Control** → **Manage** → **Pull or Deploy** → **Update from Remote**
-2. cPanel → **Setup Node.js App** → **Restart**
+## Updating the site later (automatic)
+Every push to GitHub can redeploy the site by itself:
+1. cPanel → **Security → Manage API Tokens → Create**. Name it `github-deploy`, no expiry, and copy the token.
+2. GitHub → repo **Settings → Secrets and variables → Actions → New repository secret**, three times:
+   - `CPANEL_HOST`: your cPanel server name, the part of your cPanel address before `:2083` (e.g. `server123.canspace.ca`)
+   - `CPANEL_USER`: your cPanel username (e.g. `kingsto2`)
+   - `CPANEL_TOKEN`: the token from step 1
+   - optional `CPANEL_REPO_PATH` if your code isn't in `/home2/<username>/apps/pstappraisal`
+3. That's it. After each push, GitHub (the **Actions** tab) tells cPanel to pull the code and run `.cpanel.yml`,
+   which installs any new packages and restarts the app. You can also run it by hand: **Actions → Deploy to cPanel → Run workflow**.
+
+cPanel still pulls the code itself, so **Update from Remote** must work first (see the Git step above).
+
+**By hand:** cPanel → **Git™ Version Control → Manage → Pull or Deploy → Update from Remote**, then **Deploy HEAD Commit**.
 
 ## Backups
 Orders are saved in `pstappraisal/data/` and customer photos in `pstappraisal/uploads/`. Include both in your CanSpace backups.
