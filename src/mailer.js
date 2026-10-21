@@ -36,6 +36,7 @@ async function sendAppraisal(sub, valueText, attachments, refund = 0) {
     from: process.env.MAIL_FROM || process.env.SMTP_USER,
     to: sub.email,
     bcc: process.env.MAIL_BCC || undefined,
+    replyTo: process.env.REPLY_TO || undefined, // client replies go here instead of the sending mailbox
     subject: `Your vehicle appraisal ${sub.ref} – ${vehicle}`,
     text: `Hi ${sub.name},\n\nYour appraisal for the ${vehicle} (VIN ${d.vin}) is complete.\n` +
       `Appraised value: ${valueText}\n\nYour signed appraisal is attached.\n\n${nextStep}\n\n` +
@@ -61,7 +62,7 @@ async function sendAppraisal(sub, valueText, attachments, refund = 0) {
 async function sendContact({ name, email, ref, message }) {
   const msg = {
     from: process.env.MAIL_FROM || process.env.SMTP_USER,
-    to: process.env.CONTACT_TO || process.env.MAIL_BCC || process.env.SMTP_USER,
+    to: process.env.CONTACT_TO || process.env.REPLY_TO || process.env.MAIL_BCC || process.env.SMTP_USER,
     replyTo: email,
     subject: `Website message from ${name}${ref ? ' (' + ref + ')' : ''}`,
     text: `From: ${name} <${email}>\nOrder ref: ${ref || '—'}\n\n${message}`,

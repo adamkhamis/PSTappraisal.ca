@@ -31,11 +31,13 @@ const GROUPS = [
   ] },
   { title: 'Email', note: 'Used to send appraisals to clients and alerts to you. Leave the server empty to save emails on the server instead of sending.', fields: [
     { key: 'SMTP_HOST', label: 'Outgoing mail server', placeholder: 'mail.pstappraisal.ca' },
-    { key: 'SMTP_PORT', label: 'Port', type: 'number', default: '465' },
+    { key: 'SMTP_PORT', label: 'Port', type: 'number', default: '465', help: '465 (SSL) for cPanel mail; 587 for most email services.' },
     { key: 'SMTP_USER', label: 'Username', type: 'email', placeholder: 'support@pstappraisal.ca' },
     { key: 'SMTP_PASS', label: 'Password', type: 'secret' },
     { key: 'MAIL_FROM', label: 'Send emails as', default: 'PST Appraisal BC <support@pstappraisal.ca>' },
-    { key: 'MAIL_BCC', label: 'Send yourself a copy of every appraisal at', type: 'email', default: 'support@pstappraisal.ca' },
+    { key: 'REPLY_TO', label: 'When clients reply, send it to', type: 'email', default: 'admin@garagemobile.net', help: 'Can be any inbox, e.g. admin@garagemobile.net.' },
+    { key: 'MAIL_BCC', label: 'Send yourself a copy of every appraisal at', type: 'email', default: 'admin@garagemobile.net' },
+    { key: 'CONTACT_TO', label: 'Send website contact-form messages to', type: 'email', default: 'admin@garagemobile.net' },
   ] },
   { title: 'New order alerts', fields: [
     { key: 'NOTIFY_EMAIL', label: 'Email new orders to', type: 'email', default: 'adam@khamis.ca' },
