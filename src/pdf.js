@@ -18,7 +18,6 @@ function fieldValues(sub, value, notes) {
     buyer_email: sub.email,
     buyer_phone: d.phone || '',
     buyer_address: [d.address, d.city, d.province, d.postal].filter(Boolean).join(', '),
-    seller_name: d.seller_name || '',
     sale_date: d.sale_date || '',
     purchase_price: d.purchase_price ? money(d.purchase_price) : '',
     vin: (d.vin || '').toUpperCase(),
@@ -103,7 +102,6 @@ async function buildCertificate(sub, value, notes) {
   ]);
   section('Transaction', [
     ['Owner / Buyer', f.buyer_name],
-    ['Seller', f.seller_name],
     ['Address', f.buyer_address],
     ['Date of sale', f.sale_date],
     ['Declared purchase price', f.purchase_price],

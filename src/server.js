@@ -265,7 +265,7 @@ app.get('/admin/sub/:id', (req, res) => {
         <p class="desc">${esc(d.description)}</p>
         <h2>Sale</h2><p>${regLabel(d)}</p><dl>
           ${row('Purchase price', money(d.purchase_price))}${row('Black Book value quoted', d.black_book ? money(d.black_book) : '')}
-          ${row('Date of sale', d.sale_date)}${row('Seller', d.seller_name)}${d.registered === 'yes' ? row('PST paid', d.pst_paid ? money(d.pst_paid) : '') : ''}</dl>
+          ${row('Date of sale', d.sale_date)}${d.registered === 'yes' ? row('PST paid', d.pst_paid ? money(d.pst_paid) : '') : ''}</dl>
         <h2>Client</h2><dl>
           ${row('Name', s.name)}${row('Email', s.email)}${row('Phone', d.phone)}
           ${row('Address', [d.address, d.city, 'BC', d.postal].filter(Boolean).join(', '))}</dl>
@@ -416,7 +416,7 @@ const SAMPLE_ORDER = {
   data: {
     phone: '604-555-0123', address: '123 Example St', city: 'Surrey', postal: 'V3T 1A1', registered: 'yes', registered_date: new Date().toISOString().slice(0, 10),
     vin: '2HGFC2F59JH512345', year: '2018', make: 'Honda', model: 'Civic', trim: 'LX', colour: 'Black', odometer: '236400', odometer_unit: 'km',
-    purchase_price: '8200', black_book: '13900', sale_date: new Date().toISOString().slice(0, 10), seller_name: 'Example Seller', condition: 'Fair',
+    purchase_price: '8200', black_book: '13900', sale_date: new Date().toISOString().slice(0, 10), condition: 'Fair',
     issues: ['High kilometres', 'Warning lights on'],
   },
   photos: [],
