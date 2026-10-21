@@ -32,6 +32,7 @@ const OUT = process.env.OUT || '/home/user/appraisal-app/marketing/business-card
   .badge { display: inline-flex; align-items: center; gap: 3px; font: 700 6.3pt Archivo, Arial; letter-spacing: .02em; text-transform: uppercase;
            border: 0.6pt solid rgba(143,224,180,.65); color: #d9f5e6; border-radius: 99px; padding: 1.5px 6px 1.5px 4px; }
   .badge svg { width: 6.5pt; height: 6.5pt; fill: #8fe0b4; }
+  .art { position: absolute; right: 0.24in; top: 0.24in; width: 1.22in; height: auto; }
   .bottom { margin-top: auto; display: flex; justify-content: space-between; align-items: flex-end; gap: 8px; }
   .contact { display: grid; gap: 2px; font-size: 7.8pt; font-weight: 600; }
   .contact div { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
@@ -59,7 +60,35 @@ const OUT = process.env.OUT || '/home/user/appraisal-app/marketing/business-card
   .back .right strong { font: 800 7pt/1.15 Archivo, Arial; }
   .back .right small { font-size: 6.2pt; color: #c9d8ee; }`;
 
-  const front = `<div class="card front"><div class="safe">
+  const front = `<div class="card front">
+    <svg class="art" viewBox="0 0 120 112" aria-hidden="true">
+      <g transform="rotate(6 60 50)">
+        <rect x="30" y="4" width="62" height="80" rx="4" fill="#ffffff" fill-opacity=".1" stroke="#ffffff" stroke-opacity=".55" stroke-width="1.4"/>
+        <rect x="30" y="4" width="62" height="13" rx="4" fill="#ffffff" fill-opacity=".16"/>
+        <text x="61" y="13.5" text-anchor="middle" font-family="Archivo, Arial" font-weight="800" font-size="7" fill="#ffffff">FIN 320</text>
+        <g stroke="#ffffff" stroke-opacity=".45" stroke-width="1.6" stroke-linecap="round">
+          <line x1="38" y1="26" x2="84" y2="26"/><line x1="38" y1="33" x2="76" y2="33"/><line x1="38" y1="40" x2="82" y2="40"/>
+          <line x1="38" y1="47" x2="70" y2="47"/>
+        </g>
+        <rect x="38" y="54" width="46" height="11" rx="2" fill="#8fe0b4" fill-opacity=".22" stroke="#8fe0b4" stroke-opacity=".7"/>
+        <text x="42" y="62" font-family="Archivo, Arial" font-weight="800" font-size="6.6" fill="#8fe0b4">$ 8,200.00</text>
+        <path d="M38 76 q5 -6 9 0 t9 0 t9 -2" fill="none" stroke="#ffffff" stroke-opacity=".6" stroke-width="1.3" stroke-linecap="round"/>
+      </g>
+      <g transform="translate(4 70)">
+        <path d="M6 22 h62 a4 4 0 0 0 4 -4 v-5 a4 4 0 0 0 -3 -4 l-11 -3 l-9 -8 a6 6 0 0 0 -4 -1.5 h-20 a6 6 0 0 0 -5 2.5 l-6 7 l-7 2 a4 4 0 0 0 -3 4 v6 a4 4 0 0 0 4 4z"
+              fill="#0f3a73" stroke="#ffffff" stroke-width="1.5" stroke-linejoin="round"/>
+        <path d="M22 8 l4.5 -5.5 h13 l7.5 5.5z" fill="#ffffff" fill-opacity=".18" stroke="#ffffff" stroke-opacity=".6" stroke-width="1"/>
+        <circle cx="18" cy="22" r="6.5" fill="#0a2347" stroke="#ffffff" stroke-width="1.5"/><circle cx="18" cy="22" r="2.2" fill="#ffffff" fill-opacity=".7"/>
+        <circle cx="56" cy="22" r="6.5" fill="#0a2347" stroke="#ffffff" stroke-width="1.5"/><circle cx="56" cy="22" r="2.2" fill="#ffffff" fill-opacity=".7"/>
+      </g>
+      <g transform="translate(95 76) rotate(-14)">
+        <circle r="17" fill="#0f7a4a" fill-opacity=".9" stroke="#8fe0b4" stroke-width="1.4"/>
+        <circle r="13.5" fill="none" stroke="#8fe0b4" stroke-width=".7" stroke-dasharray="1.6 1.4"/>
+        <path d="M-6 -1.5 l4 4 l8 -8" fill="none" stroke="#ffffff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+        <text y="9" text-anchor="middle" font-family="Archivo, Arial" font-weight="800" font-size="4.6" letter-spacing=".4" fill="#ffffff">APPRAISED</text>
+      </g>
+    </svg>
+    <div class="safe">
     <div class="logo"><span class="mark">PST</span>Appraisal<b>BC</b></div>
     <div class="tag">FIN 320 PST<br><em>Vehicle Appraisals</em></div>
     <div class="badges">
