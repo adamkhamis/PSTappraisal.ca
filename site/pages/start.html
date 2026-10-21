@@ -40,7 +40,7 @@
       <fieldset>
         <legend>Vehicle</legend>
         <div class="grid">
-          <label class="span2">VIN (17 characters)*<input name="vin" required maxlength="17" class="upper" autocapitalize="characters"></label>
+          <label class="span2">VIN (17 characters)*<input name="vin" id="vin-input" required maxlength="17" class="upper" autocapitalize="characters" autocomplete="off" spellcheck="false"><small id="vin-status" class="vin-status" aria-live="polite">Enter the VIN and we'll fill in the year, make and model for you.</small></label>
           <label>Year*<input name="year" type="number" min="1950" max="2027" required></label>
           <label>Make*<input name="make" required placeholder="Toyota"></label>
           <label>Model*<input name="model" required placeholder="Corolla"></label>
@@ -126,10 +126,10 @@
             <label class="drop small-drop"><input type="file" name="registration" accept="image/*,application/pdf" multiple><span><b>Add files</b> or drag them here</span></label>
             <div class="previews"></div>
           </div>
-          <div class="up-box" data-group="vin" data-required>
+          <div class="up-box" data-group="vinphoto" data-required>
             <div class="up-head"><b>Clear photo of the VIN</b><span class="req">Required</span></div>
             <p>The VIN plate on the dashboard (seen through the windshield) or the sticker on the driver's door frame. Make sure all 17 characters are readable.</p>
-            <label class="drop small-drop"><input type="file" name="vin" accept="image/*" multiple><span><b>Add files</b> or drag them here</span></label>
+            <label class="drop small-drop"><input type="file" name="vinphoto" accept="image/*" multiple><span><b>Add files</b> or drag them here</span></label>
             <div class="previews"></div>
           </div>
           <div class="up-box" data-group="carfax">

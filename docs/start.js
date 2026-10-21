@@ -60,3 +60,40 @@ form.addEventListener('submit', async (e) => {
 });
 
 if (location.search.includes('cancelled')) showError("Payment was cancelled. Your details are saved, so you can try again.");
+
+// VIN lookup: once 17 valid characters are typed, fill in year, make, model and trim from NHTSA's free
+// vehicle database (covers almost every car sold in Canada). Only fills boxes the customer hasn't typed in.
+const vinInput = document.getElementById('vin-input'), vinStatus = document.getElementById('vin-status');
+const autoFields = ['year', 'make', 'model', 'trim'].map((n) => form.querySelector(`input[name="${n}"]`));
+autoFields.forEach((f) => f.addEventListener('input', () => { delete f.dataset.auto; }));
+const titleCase = (s) => (/[a-z]/.test(s) ? s : s.toLowerCase().replace(/\b[a-z]/g, (c) => c.toUpperCase()).replace(/\bBmw\b|\bGmc\b|\bRam\b/g, (m) => m.toUpperCase()));
+let lastVin = '';
+
+async function lookUpVin() {
+  const vin = vinInput.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (vin !== vinInput.value) vinInput.value = vin;
+  vinStatus.className = 'vin-status';
+  if (vin.length < 17) { lastVin = ''; vinStatus.textContent = vin ? `${17 - vin.length} more character${vin.length === 16 ? '' : 's'} to go.` : "Enter the VIN and we'll fill in the year, make and model for you."; return; }
+  if (/[IOQ]/.test(vin)) { vinStatus.className = 'vin-status bad'; vinStatus.textContent = "VINs never use the letters I, O or Q. Check for a 1 or 0 typed as a letter."; return; }
+  if (vin === lastVin) return;
+  lastVin = vin;
+  vinStatus.textContent = 'Looking up this VIN…';
+  try {
+    const res = await fetch(`https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVinValues/${vin}?format=json`);
+    const v = (await res.json()).Results[0];
+    if (vin !== lastVin) return; // the VIN changed while we were waiting
+    const found = { year: v.ModelYear, make: v.Make && titleCase(v.Make), model: v.Model, trim: v.Trim || v.Series };
+    if (!found.year || !found.make) throw new Error('not found');
+    for (const f of autoFields) {
+      const val = found[f.name];
+      if (val && (!f.value || f.dataset.auto)) { f.value = val; f.dataset.auto = '1'; }
+    }
+    vinStatus.className = 'vin-status ok';
+    vinStatus.textContent = `Found: ${[found.year, found.make, found.model, found.trim].filter(Boolean).join(' ')}. Please check it matches the vehicle.`;
+  } catch {
+    vinStatus.className = 'vin-status';
+    vinStatus.textContent = "We couldn't look up this VIN automatically. Please fill in the vehicle details below.";
+  }
+}
+vinInput.addEventListener('input', lookUpVin);
+lookUpVin();

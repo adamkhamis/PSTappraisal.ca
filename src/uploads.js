@@ -6,6 +6,6 @@ module.exports = [
   { key: 'quotes', label: 'Repair quotations', required: false, max: 10, docs: true },
   { key: 'apv9t', label: 'Completed APV9T Transfer/Tax form', required: true, max: 4, docs: true },
   { key: 'registration', label: 'Current vehicle registration', required: true, max: 4, docs: true },
-  { key: 'vin', label: 'Clear photo of the VIN', required: true, max: 3 },
+  { key: 'vinphoto', label: 'Clear photo of the VIN', required: true, max: 3 },
   { key: 'carfax', label: 'CARFAX report', required: false, max: 3, docs: true },
 ];

@@ -194,7 +194,8 @@ app.use('/admin/photos', express.static(UPLOADS));
 const vehicle = (d) => [d.year, d.make, d.model, d.trim].filter(Boolean).join(' ');
 // Groups an order's uploads by box; orders from before the boxes existed have plain filenames.
 function uploadGroups(photos) {
-  const list = photos.map((p) => (typeof p === 'string' ? { file: p, group: 'vehicle', name: p, pdf: /\.pdf$/i.test(p) } : p));
+  const list = photos.map((p) => (typeof p === 'string' ? { file: p, group: 'vehicle', name: p, pdf: /\.pdf$/i.test(p) } : p))
+    .map((p) => (p.group === 'vin' ? { ...p, group: 'vinphoto' } : p)); // renamed box
   return UPLOAD_GROUPS.map((g) => ({ label: g.label, items: list.filter((p) => p.group === g.key) })).filter((g) => g.items.length);
 }
 const regLabel = (d) => d.registered === 'yes'

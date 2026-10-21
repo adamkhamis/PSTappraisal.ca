@@ -457,3 +457,6 @@ small .badge, td .badge { display:inline-block; margin-top:4px; }
 @media (max-width:700px) { .set-grid { grid-template-columns:1fr; } }
 .btn-link { display:inline-block; background:#fff; color:var(--accent); border:1px solid var(--accent); border-radius:8px; padding:11px 18px; font-weight:700; text-decoration:none; }
 .btn-link:hover { background:var(--accent-soft); }
+.vin-status { font-weight:400; font-size:.86rem; color:var(--muted); }
+.vin-status.ok { color:var(--save); font-weight:600; }
+.vin-status.bad { color:#b3261e; }
