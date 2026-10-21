@@ -137,5 +137,11 @@ const OUT = process.env.OUT || '/home/user/appraisal-app/marketing/business-card
     await v.setContent(page(html), { waitUntil: 'networkidle' }); await v.evaluate(() => document.fonts.ready);
     await v.screenshot({ path: `${OUT}/card-${name}.png`, clip: { x: 12, y: 12, width: 336, height: 192 } });
   }
+  // Print PNGs at 600 dpi with the 1/8" bleed: 3.75" x 2.25" = 2250 x 1350 px. Upload these to the printer.
+  const hi = await b.newPage({ viewport: { width: 360, height: 216 }, deviceScaleFactor: 600 / 96 });
+  for (const [name, html] of [['front', front], ['back', back]]) {
+    await hi.setContent(page(html), { waitUntil: 'networkidle' }); await hi.evaluate(() => document.fonts.ready);
+    await hi.screenshot({ path: `${OUT}/PST-Appraisal-card-${name}-print-600dpi.png` });
+  }
   await b.close();
 })();
