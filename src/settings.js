@@ -21,9 +21,10 @@ const GROUPS = [
   ] },
   { title: 'Price', fields: [
     { key: 'PRICE_CENTS', label: 'Price before tax ($)', type: 'money', default: '7000' },
-    { key: 'TAX_PERCENT', label: 'Tax added at checkout (%)', type: 'number', default: '5', help: 'Set to 0 if you\'re not registered for GST.' },
-    { key: 'TAX_NAME', label: 'Tax name', default: 'GST' },
+    { key: 'TAX_PERCENT', label: 'GST (%)', type: 'number', default: '5', help: 'Set to 0 if you\'re not registered for GST.' },
     { key: 'TAX_NUMBER', label: 'GST number (shown on the receipt)', help: 'Optional.' },
+    { key: 'PST_TAX_PERCENT', label: 'PST (%)', type: 'number', default: '7', help: 'BC PST is 7%. Set to 0 to stop charging it. The PST number is entered under your FIN 320 details.' },
+    { key: 'TAX_NAME', label: 'Name for the first tax', default: 'GST' },
   ] },
   { title: 'Stripe payments', note: 'Leave the secret key empty to run in test mode: orders skip payment.', fields: [
     { key: 'STRIPE_SECRET_KEY', label: 'Secret key', type: 'secret', help: 'Stripe → Developers → API keys. Starts with sk_live_ (or sk_test_ for testing).' },

@@ -3,13 +3,14 @@
 const fs = require('fs');
 const path = require('path');
 const { renderPage, PAGES } = require('./pages');
+const { priceVars } = require('./pricing');
 
 const out = path.resolve(process.argv[2] || 'static-preview');
 const preview = process.argv.includes('--preview');
 const BANNER = '<div style="background:#fff4d1;color:#5c4400;text-align:center;font:600 14px sans-serif;padding:8px">Preview of PSTappraisal.ca · ordering and the contact form work once the full site is live</div>';
 fs.mkdirSync(out, { recursive: true });
 for (const name of PAGES) {
-  const html = renderPage(name, { noindex: preview, price: '$70', price_amount: '$70', tax_name: 'GST', tax_line: '+ $3.50 GST (5%) = $73.50 total', fee_total: '73.5' })
+  const html = renderPage(name, { noindex: preview, ...priceVars() })
     .replace(/(href|src)="\/(?!\/)([^"#?]*)/g, (m, attr, p) => `${attr}="${p === '' ? 'index.html' : /\.\w+$/.test(p) ? p : p + '.html'}`);
   fs.writeFileSync(path.join(out, `${name}.html`), preview ? html.replace('<body>', '<body>' + BANNER) : html);
 }

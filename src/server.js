@@ -12,6 +12,7 @@ const { sendAppraisal, sendContact, esc } = require('./mailer');
 const { renderPage, PAGES, sitemapXml, robotsTxt } = require('./pages');
 const UPLOAD_GROUPS = require('./uploads');
 const { toNumber } = require('./num');
+const { pricing, priceVars } = require('./pricing');
 const { notifyNewOrder } = require('./notify');
 
 // Marks an order paid and, the first time only, emails and texts you about it.
@@ -22,13 +23,6 @@ function paid(ref) {
 
 const PORT = process.env.PORT || 3000;
 const BASE_URL = (process.env.BASE_URL || `http://localhost:${PORT}`).replace(/\/$/, '');
-// Price and tax come from Admin → Settings, so they're read on every request.
-function pricing() {
-  const cents = Number(process.env.PRICE_CENTS || 7000);
-  const pct = Number(process.env.TAX_PERCENT ?? 5);
-  return { cents, pct, name: process.env.TAX_NAME || 'GST', tax: Math.round(cents * pct / 100) };
-}
-
 // Stripe client for the current secret key; null = test mode (orders skip payment).
 let stripeCache = { key: null, client: null };
 function getStripe() {
@@ -60,17 +54,6 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
 // ---------- Public pages (site/pages/*.html, e.g. /faq, /how-it-works) ----------
-function priceVars() {
-  const p = pricing();
-  const amount = money(p.cents / 100).replace('.00', '');
-  return {
-    price_amount: amount,
-    price: amount,
-    tax_name: p.name,
-    tax_line: p.tax ? `+ ${money(p.tax / 100)} ${p.name} (${p.pct}%) = ${money((p.cents + p.tax) / 100)} total` : 'No tax added',
-    fee_total: String((p.cents + p.tax) / 100),
-  };
-}
 app.get(['/', ...PAGES.filter((p) => p !== 'index').map((p) => '/' + p)], (req, res) => {
   res.send(renderPage(req.path === '/' ? 'index' : req.path.slice(1), priceVars()));
 });
@@ -148,10 +131,10 @@ app.post('/api/submit', upload.fields(UPLOAD_GROUPS.map((g) => ({ name: g.key, m
           unit_amount: p.cents,
           product_data: { name: 'FIN 320 PST Vehicle Appraisal', description: `${data.year} ${data.make} ${data.model} – VIN ${data.vin}` },
         },
-      }].concat(p.tax ? [{
+      }].concat(p.taxes.map((t) => ({
         quantity: 1,
-        price_data: { currency: 'cad', unit_amount: p.tax, product_data: { name: `${p.name} (${p.pct}%)`, description: process.env.TAX_NUMBER ? `${p.name} #${process.env.TAX_NUMBER}` : undefined } },
-      }] : []),
+        price_data: { currency: 'cad', unit_amount: t.cents, product_data: { name: `${t.name} (${t.pct}%)`, description: t.number ? `${t.name} #${t.number}` : undefined } },
+      }))),
       success_url: `${BASE_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${BASE_URL}/start?cancelled=1`,
     });
