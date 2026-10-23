@@ -12,7 +12,7 @@ fs.mkdirSync(out, { recursive: true });
 for (const name of PAGES) {
   const html = renderPage(name, { noindex: preview, ...priceVars() })
     .replace(/(href|src)="\/(?!\/)([^"#?]*)/g, (m, attr, p) => `${attr}="${p === '' ? 'index.html' : /\.\w+$/.test(p) ? p : p + '.html'}`);
-  fs.writeFileSync(path.join(out, `${name}.html`), preview ? html.replace('<body>', '<body>' + BANNER) : html);
+  fs.writeFileSync(path.join(out, `${name}.html`), preview ? html.replace(/<body[^>]*>/, (m) => m + BANNER) : html);
 }
 for (const f of ['style.css', 'site.js', 'calc.js', 'start.js', 'thank-you.js', 'lien.js', 'favicon.svg', 'favicon-32.png', 'apple-touch-icon.png', 'og-image.png']) fs.copyFileSync(path.join(__dirname, '..', 'public', f), path.join(out, f));
 console.log(`Wrote ${PAGES.length} pages to ${out}`);
