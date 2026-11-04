@@ -46,6 +46,11 @@ module.exports = {
     r.status = 'paid'; r.paid_at = now(); save();
     return copy(r);
   },
+  // Admin edits: replaces the customer, details and file list; status and payment are left as they are.
+  update(id, { name, email, data, photos }) {
+    const r = rows.find((x) => x.id === Number(id));
+    if (r) { Object.assign(r, { name, email, data, photos }); save(); }
+  },
   markCompleted(id, value, notes, finCondition) {
     const r = rows.find((x) => x.id === id);
     if (r) Object.assign(r, { status: 'completed', appraised_value: value, appraiser_notes: notes, fin_condition: finCondition || r.fin_condition, completed_at: now() }), save();

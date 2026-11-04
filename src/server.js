@@ -270,7 +270,9 @@ app.get('/admin/sub/:id', (req, res) => {
   const d = s.data;
   const row = (l, v) => `<div><dt>${l}</dt><dd>${esc(v) || '—'}</dd></div>`;
   res.send(layout(s.ref, `
-    <p><a href="/admin?status=${s.status}">← Back</a></p>
+    <p class="detail-nav"><a href="/admin?status=${s.status}">← Back</a><a class="btn-link" href="/admin/sub/${s.id}/edit">Edit order / add photos</a></p>
+    ${req.query.saved ? '<p class="flash">Changes saved.</p>' : ''}
+    ${d.admin_notes ? `<div class="admin-notes"><b>Internal notes</b><p>${esc(d.admin_notes)}</p></div>` : ''}
     <h1>${esc(vehicle(d))} <span class="badge ${s.status}">${STATUS_LABEL[s.status]}</span></h1>
     ${req.query.err ? `<p class="warn">${esc(req.query.err)}</p>` : ''}
     ${d.payment_method === 'etransfer' ? `<p class="muted">Created in the admin portal · payment by e-Transfer (${esc(etransferAmount())})</p>` : ''}
@@ -344,26 +346,11 @@ function etransferAmount() {
   return money(p.total / 100);
 }
 
-function newOrderPage(error = '', b = {}) {
+// Customer, vehicle and sale fields, shared by Admin → New order and Edit order. b = current values.
+function orderDetailFields(b) {
   const v = (k) => esc(b[k] ?? '');
   const sel = (k, val, def) => ((b[k] ?? def) === val ? 'selected' : '');
-  const chk = (k, val, def) => ((b[k] ?? def) === val ? 'checked' : '');
-  const etEmail = process.env.ETRANSFER_EMAIL || 'support@pstappraisal.ca';
-  return layout('New order', `
-    <h1>New order</h1>
-    <p class="muted">For customers who order by phone or email and pay by e-Transfer. After the order is paid, approve it as usual and the FIN 320 (and FIN 355/MV) is emailed to them.</p>
-    ${error ? `<p class="warn">${esc(error)}</p>` : ''}
-    <form method="post" action="/admin/new" enctype="multipart/form-data" class="settings new-order">
-      <section class="set-group"><h2>Payment</h2>
-        <div class="set-grid">
-          <label>Payment<select name="payment_status">
-            <option value="pending" ${sel('payment_status', 'pending', 'pending')}>e-Transfer not received yet</option>
-            <option value="received" ${sel('payment_status', 'received', 'pending')}>e-Transfer already received</option>
-          </select></label>
-          <label class="chk"><span><input type="checkbox" name="send_instructions" value="1" ${chk('send_instructions', '1', '1')}> Email the customer e-Transfer instructions</span>
-            <small>Asks them to send ${esc(etransferAmount())} to ${esc(etEmail)} with the order number. Only sent if payment isn't received yet.</small></label>
-        </div>
-      </section>
+  return `
       <section class="set-group"><h2>Customer</h2>
         <div class="set-grid">
           <label>Full name*<input name="name" required value="${v('name')}"></label>
@@ -393,6 +380,46 @@ function newOrderPage(error = '', b = {}) {
         </div>
         <label style="margin-top:14px;display:flex">Notes about the condition<textarea name="description" rows="3">${v('description')}</textarea></label>
       </section>
+`;
+}
+
+// Cleans up the typed order fields the same way as the website form. Returns { data } or { error }.
+function cleanOrderFields(rest, existing = {}) {
+  const data = { ...existing, ...rest, vin: String(rest.vin || '').toUpperCase().replace(/\s/g, ''), province: 'BC' };
+  if (data.registered !== 'yes') { delete data.registered_date; delete data.pst_paid; }
+  for (const k of ['odometer', 'purchase_price', 'black_book', 'pst_paid']) {
+    if (data[k] === undefined || String(data[k]).trim() === '') { delete data[k]; continue; }
+    const n = toNumber(data[k]);
+    if (!(n >= 0)) return { error: `Please enter the ${k.replace('_', ' ')} as a number.` };
+    data[k] = String(n);
+  }
+  return { data };
+}
+
+const ORDER_REQUIRED = ['name', 'email', 'phone', 'address', 'city', 'postal', 'vin', 'year', 'make', 'model', 'odometer', 'purchase_price', 'sale_date'];
+const uploadedFiles = (files) => UPLOAD_GROUPS.flatMap((g) => (files[g.key] || []).map((f) => ({ file: f.filename, group: g.key, name: f.originalname, pdf: f.mimetype === 'application/pdf' })));
+
+function newOrderPage(error = '', b = {}) {
+  const v = (k) => esc(b[k] ?? '');
+  const sel = (k, val, def) => ((b[k] ?? def) === val ? 'selected' : '');
+  const chk = (k, val, def) => ((b[k] ?? def) === val ? 'checked' : '');
+  const etEmail = process.env.ETRANSFER_EMAIL || 'support@pstappraisal.ca';
+  return layout('New order', `
+    <h1>New order</h1>
+    <p class="muted">For customers who order by phone or email and pay by e-Transfer. After the order is paid, approve it as usual and the FIN 320 (and FIN 355/MV) is emailed to them.</p>
+    ${error ? `<p class="warn">${esc(error)}</p>` : ''}
+    <form method="post" action="/admin/new" enctype="multipart/form-data" class="settings new-order">
+      <section class="set-group"><h2>Payment</h2>
+        <div class="set-grid">
+          <label>Payment<select name="payment_status">
+            <option value="pending" ${sel('payment_status', 'pending', 'pending')}>e-Transfer not received yet</option>
+            <option value="received" ${sel('payment_status', 'received', 'pending')}>e-Transfer already received</option>
+          </select></label>
+          <label class="chk"><span><input type="checkbox" name="send_instructions" value="1" ${chk('send_instructions', '1', '1')}> Email the customer e-Transfer instructions</span>
+            <small>Asks them to send ${esc(etransferAmount())} to ${esc(etEmail)} with the order number. Only sent if payment isn't received yet.</small></label>
+        </div>
+      </section>
+${orderDetailFields(b)}
       <section class="set-group"><h2>Photos and documents <span class="pill">Optional</span></h2>
         <p class="muted">Add any photos or documents the customer sent you. You can also order without them.</p>
         <div class="set-grid">${UPLOAD_GROUPS.map((g) => `<label>${esc(g.label)}<input type="file" name="${g.key}" multiple accept="image/*,application/pdf"></label>`).join('')}</div>
@@ -407,20 +434,13 @@ app.post('/admin/new', (req, res) => {
   receiveUploads(req, res, async (upErr) => {
     const b = req.body || {};
     if (upErr) return res.status(400).send(newOrderPage('Files: ' + upErr.message, b));
-    const missing = ['name', 'email', 'phone', 'address', 'city', 'postal', 'vin', 'year', 'make', 'model', 'odometer', 'purchase_price', 'sale_date'].filter((k) => !String(b[k] || '').trim());
+    const missing = ORDER_REQUIRED.filter((k) => !String(b[k] || '').trim());
     if (missing.length) return res.status(400).send(newOrderPage('Please fill in: ' + missing.join(', '), b));
     const { name, email, payment_status, send_instructions, ...rest } = b;
-    const data = { ...rest, vin: String(rest.vin).toUpperCase().replace(/\s/g, ''), province: 'BC', issues: [], payment_method: 'etransfer', source: 'admin' };
-    if (data.registered !== 'yes') { delete data.registered_date; delete data.pst_paid; }
-    for (const k of ['odometer', 'purchase_price', 'black_book', 'pst_paid']) {
-      if (data[k] === undefined || String(data[k]).trim() === '') { delete data[k]; continue; }
-      const n = toNumber(data[k]);
-      if (!(n >= 0)) return res.status(400).send(newOrderPage(`Please enter the ${k.replace('_', ' ')} as a number.`, b));
-      data[k] = String(n);
-    }
-    const files = req.files || {};
-    const photos = UPLOAD_GROUPS.flatMap((g) => (files[g.key] || []).map((f) => ({ file: f.filename, group: g.key, name: f.originalname, pdf: f.mimetype === 'application/pdf' })));
-    const sub = db.create({ name: name.trim(), email: email.trim(), data, photos });
+    const cleaned = cleanOrderFields({ ...rest, issues: [], payment_method: 'etransfer', source: 'admin' });
+    if (cleaned.error) return res.status(400).send(newOrderPage(cleaned.error, b));
+    const { data } = cleaned;
+    const sub = db.create({ name: name.trim(), email: email.trim(), data, photos: uploadedFiles(req.files || {}) });
     if (payment_status === 'received') {
       db.markPaid(sub.ref);
     } else if (send_instructions) {
@@ -444,6 +464,59 @@ app.post('/admin/new', (req, res) => {
       }
     }
     res.redirect(payment_status === 'received' ? `/admin/sub/${sub.id}` : `/admin?status=awaiting_payment&created=${sub.ref}`);
+  });
+});
+
+// ---------- Admin → Edit order ----------
+function editOrderPage(s, error = '', b = null) {
+  const values = b || { name: s.name, email: s.email, ...s.data };
+  const photoList = s.photos.map((p, i) => ({ ...(typeof p === 'string' ? { file: p, group: 'vehicle', name: p } : p), i }));
+  return layout(`Edit ${s.ref}`, `
+    <p><a href="/admin/sub/${s.id}">← Back to order</a></p>
+    <h1>Edit ${esc(s.ref)}</h1>
+    ${error ? `<p class="warn">${esc(error)}</p>` : ''}
+    <form method="post" action="/admin/sub/${s.id}/edit" enctype="multipart/form-data" class="settings new-order">
+      <section class="set-group"><h2>Internal notes</h2>
+        <p class="muted">Only you see these. They aren't printed on the FIN 320 or sent to the customer.</p>
+        <textarea name="admin_notes" rows="4" style="width:100%">${esc(values.admin_notes ?? s.data.admin_notes ?? '')}</textarea>
+      </section>
+      ${orderDetailFields(values)}
+      <section class="set-group"><h2>Photos and documents</h2>
+        ${photoList.length ? `<p class="muted">Tick any file to remove it.</p><div class="edit-files">${photoList.map((p) => `
+          <label class="edit-file">${p.pdf ? '<span class="pdf">PDF</span>' : `<img src="/admin/photos/${esc(p.file)}" alt="">`}
+            <span><input type="checkbox" name="remove" value="${esc(p.file)}"> Remove</span>
+            <small>${esc((UPLOAD_GROUPS.find((g) => g.key === p.group || (p.group === 'vin' && g.key === 'vinphoto')) || {}).label || '')}</small></label>`).join('')}</div>` : '<p class="muted">No files yet.</p>'}
+        <h3 style="margin-top:18px">Add more</h3>
+        <div class="set-grid">${UPLOAD_GROUPS.map((g) => `<label>${esc(g.label)}<input type="file" name="${g.key}" multiple accept="image/*,application/pdf"></label>`).join('')}</div>
+      </section>
+      <div class="set-actions"><button type="submit">Save changes</button></div>
+    </form>`);
+}
+
+app.get('/admin/sub/:id/edit', (req, res) => {
+  const s = db.byId(req.params.id);
+  if (!s) return res.sendStatus(404);
+  res.send(editOrderPage(s));
+});
+
+app.post('/admin/sub/:id/edit', (req, res) => {
+  const s = db.byId(req.params.id);
+  if (!s) return res.sendStatus(404);
+  receiveUploads(req, res, (upErr) => {
+    const b = req.body || {};
+    if (upErr) return res.status(400).send(editOrderPage(s, 'Files: ' + upErr.message, b));
+    const missing = ORDER_REQUIRED.filter((k) => !String(b[k] || '').trim());
+    if (missing.length) return res.status(400).send(editOrderPage(s, 'Please fill in: ' + missing.join(', '), b));
+    const { name, email, remove, ...rest } = b;
+    const cleaned = cleanOrderFields(rest, s.data);
+    if (cleaned.error) return res.status(400).send(editOrderPage(s, cleaned.error, b));
+    const removeSet = new Set([].concat(remove || []));
+    const kept = s.photos.filter((p) => !removeSet.has(typeof p === 'string' ? p : p.file));
+    for (const f of removeSet) { // delete removed files from disk; only names that belonged to this order
+      if (s.photos.some((p) => (typeof p === 'string' ? p : p.file) === f)) fs.rm(path.join(UPLOADS, path.basename(f)), () => {});
+    }
+    db.update(s.id, { name: name.trim(), email: email.trim(), data: cleaned.data, photos: kept.concat(uploadedFiles(req.files || {})) });
+    res.redirect(`/admin/sub/${s.id}?saved=1`);
   });
 });
 
