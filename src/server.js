@@ -216,7 +216,7 @@ const STATUS_LABEL = { paid: 'Ready to review', completed: 'Sent', awaiting_paym
 function layout(title, body) {
   return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <title>${esc(title)}</title><link rel="stylesheet" href="/style.css"></head>
-  <body class="admin"><header class="admin-bar"><a href="/admin"><b>${esc(process.env.COMPANY_NAME || 'PST Appraisal BC')}</b> · Admin</a><nav><a href="/admin">Orders</a><a href="/admin/settings">Settings</a></nav></header>
+  <body class="admin"><header class="admin-bar"><a href="/admin"><b>${esc(process.env.COMPANY_NAME || 'PST Appraisal BC')}</b> · Admin</a><nav><a href="/admin">Orders</a><a href="/admin/new">New order</a><a href="/admin/settings">Settings</a></nav></header>
   <main class="wrap">${body}</main></body></html>`;
 }
 
@@ -248,16 +248,18 @@ app.get('/admin', (req, res) => {
   const rows = db.list(status);
   const tabs = Object.entries(STATUS_LABEL).map(([k, l]) =>
     `<a class="tab ${k === status ? 'on' : ''}" href="/admin?status=${k}">${l} <span>${counts[k]}</span></a>`).join('');
-  const flash = req.query.sent ? `<p class="flash">Appraisal ${esc(req.query.sent)} emailed to the client.</p>` : '';
+  const flash = req.query.sent ? `<p class="flash">Appraisal ${esc(req.query.sent)} emailed to the client.</p>`
+    : req.query.created ? `<p class="flash">Order ${esc(req.query.created)} created.</p>`
+    : req.query.received ? `<p class="flash">e-Transfer for ${esc(req.query.received)} marked as received. It's now ready to review.</p>` : '';
   const table = rows.length ? `<table><thead><tr><th>Ref</th><th>Submitted</th><th>Client</th><th>Vehicle</th><th>Odometer</th><th>Paid price</th><th>${status === 'completed' ? 'Appraised' : 'Approve'}</th></tr></thead><tbody>
     ${rows.map((s) => `<tr>
       <td><a href="/admin/sub/${s.id}">${esc(s.ref)}</a></td>
       <td>${esc(s.created_at.slice(0, 16))}</td>
       <td>${esc(s.name)}<br><small>${esc(s.email)}</small></td>
-      <td><a href="/admin/sub/${s.id}">${esc(vehicle(s.data))}</a><br><small>${esc(s.data.condition)} · ${s.photos.length} files</small><br>${regLabel(s.data)}</td>
+      <td><a href="/admin/sub/${s.id}">${esc(vehicle(s.data))}</a><br><small>${esc(s.data.condition)} · ${s.photos.length} files</small><br>${regLabel(s.data)}${s.data.payment_method === 'etransfer' ? ' <span class="badge etransfer">e-Transfer</span>' : ''}</td>
       <td>${esc(toNumber(s.data.odometer).toLocaleString())} ${esc(s.data.odometer_unit || 'km')}</td>
       <td>${money(s.data.purchase_price)}</td>
-      <td>${status === 'paid' ? approveForm(s, true) : status === 'completed' ? money(s.appraised_value) : '—'}</td>
+      <td>${status === 'paid' ? approveForm(s, true) : status === 'completed' ? money(s.appraised_value) : markReceivedForm(s)}</td>
     </tr>`).join('')}</tbody></table>` : '<p class="empty">Nothing here.</p>';
   res.send(layout('Admin', `${flash}<nav class="tabs">${tabs}</nav>${table}${confirmScript}`));
 });
@@ -270,6 +272,8 @@ app.get('/admin/sub/:id', (req, res) => {
   res.send(layout(s.ref, `
     <p><a href="/admin?status=${s.status}">← Back</a></p>
     <h1>${esc(vehicle(d))} <span class="badge ${s.status}">${STATUS_LABEL[s.status]}</span></h1>
+    ${req.query.err ? `<p class="warn">${esc(req.query.err)}</p>` : ''}
+    ${d.payment_method === 'etransfer' ? `<p class="muted">Created in the admin portal · payment by e-Transfer (${esc(etransferAmount())})</p>` : ''}
     <p class="muted">${esc(s.ref)} · submitted ${esc(s.created_at)}${s.paid_at ? ' · paid ' + esc(s.paid_at) : ''}${s.completed_at ? ' · sent ' + esc(s.completed_at) : ''}</p>
     <div class="detail">
       <section>
@@ -287,7 +291,7 @@ app.get('/admin/sub/:id', (req, res) => {
       </section>
       <section>
         <h2>Appraisal</h2>
-        ${s.status === 'awaiting_payment' ? '<p class="warn">Not paid yet.</p>' : approveForm(s, false)}
+        ${s.status === 'awaiting_payment' ? `<p class="warn">Not paid yet.</p>${markReceivedForm(s)}` : approveForm(s, false)}
         ${d.registered === 'yes' ? `<p class="muted">Already registered: the FIN 355/MV refund application ${fs.existsSync(path.join(__dirname, '..', 'templates', 'fin-355mv.pdf')) ? `will be filled in and attached (estimated refund ${money(refundEstimate(s, s.appraised_value ?? d.purchase_price))}).` : '<b class="warn">won\'t be attached. Upload it to templates/fin-355mv.pdf.</b>'}</p>` : ''}
       </section>
     </div>
@@ -319,6 +323,128 @@ app.post('/admin/sub/:id/preview', async (req, res) => {
   const value = toNumber(req.body.value) || 0;
   const [first] = await buildAttachments(s, value, req.body.notes, req.body.condition);
   res.type('pdf').set('Content-Disposition', `inline; filename="${first.filename}"`).send(first.content);
+});
+
+// ---------- Admin → New order (phone / e-Transfer customers) ----------
+// Marks an unpaid order as paid once the e-Transfer (or any other payment) has arrived.
+function markReceivedForm(s) {
+  const what = s.data.payment_method === 'etransfer' ? 'e-Transfer' : 'payment';
+  return `<form method="post" action="/admin/sub/${s.id}/mark-paid" class="inline-approve"><button type="submit">Mark ${what} received</button></form>`;
+}
+
+app.post('/admin/sub/:id/mark-paid', (req, res) => {
+  const s = db.byId(req.params.id);
+  if (!s) return res.sendStatus(404);
+  db.markPaid(s.ref); // no new-order alert: you created or already know about this order
+  res.redirect(`/admin?received=${s.ref}`);
+});
+
+function etransferAmount() {
+  const p = pricing();
+  return money(p.total / 100);
+}
+
+function newOrderPage(error = '', b = {}) {
+  const v = (k) => esc(b[k] ?? '');
+  const sel = (k, val, def) => ((b[k] ?? def) === val ? 'selected' : '');
+  const chk = (k, val, def) => ((b[k] ?? def) === val ? 'checked' : '');
+  const etEmail = process.env.ETRANSFER_EMAIL || 'support@pstappraisal.ca';
+  return layout('New order', `
+    <h1>New order</h1>
+    <p class="muted">For customers who order by phone or email and pay by e-Transfer. After the order is paid, approve it as usual and the FIN 320 (and FIN 355/MV) is emailed to them.</p>
+    ${error ? `<p class="warn">${esc(error)}</p>` : ''}
+    <form method="post" action="/admin/new" enctype="multipart/form-data" class="settings new-order">
+      <section class="set-group"><h2>Payment</h2>
+        <div class="set-grid">
+          <label>Payment<select name="payment_status">
+            <option value="pending" ${sel('payment_status', 'pending', 'pending')}>e-Transfer not received yet</option>
+            <option value="received" ${sel('payment_status', 'received', 'pending')}>e-Transfer already received</option>
+          </select></label>
+          <label class="chk"><span><input type="checkbox" name="send_instructions" value="1" ${chk('send_instructions', '1', '1')}> Email the customer e-Transfer instructions</span>
+            <small>Asks them to send ${esc(etransferAmount())} to ${esc(etEmail)} with the order number. Only sent if payment isn't received yet.</small></label>
+        </div>
+      </section>
+      <section class="set-group"><h2>Customer</h2>
+        <div class="set-grid">
+          <label>Full name*<input name="name" required value="${v('name')}"></label>
+          <label>Email*<input name="email" type="email" required value="${v('email')}"></label>
+          <label>Phone*<input name="phone" required value="${v('phone')}"></label>
+          <label>Street address*<input name="address" required value="${v('address')}"></label>
+          <label>City*<input name="city" required value="${v('city')}"></label>
+          <label>Postal code*<input name="postal" required value="${v('postal')}"></label>
+          <label>Registered with ICBC yet?<select name="registered">
+            <option value="no" ${sel('registered', 'no', 'no')}>Not yet</option><option value="yes" ${sel('registered', 'yes', 'no')}>Yes, already registered</option></select></label>
+          <label>Date registered (if registered)<input name="registered_date" type="date" value="${v('registered_date')}"></label>
+          <label>PST paid at registration (if known)<input name="pst_paid" inputmode="decimal" value="${v('pst_paid')}"></label>
+        </div>
+      </section>
+      <section class="set-group"><h2>Vehicle and sale</h2>
+        <div class="set-grid">
+          <label>VIN*<input name="vin" required maxlength="17" style="text-transform:uppercase" value="${v('vin')}"></label>
+          <label>Year*<input name="year" required inputmode="numeric" value="${v('year')}"></label>
+          <label>Make*<input name="make" required value="${v('make')}"></label>
+          <label>Model*<input name="model" required value="${v('model')}"></label>
+          <label>Trim<input name="trim" value="${v('trim')}"></label>
+          <label>Odometer (km)*<input name="odometer" required inputmode="numeric" value="${v('odometer')}"></label>
+          <label>Purchase price*<input name="purchase_price" required inputmode="decimal" value="${v('purchase_price')}"></label>
+          <label>Date of sale*<input name="sale_date" type="date" required value="${v('sale_date')}"></label>
+          <label>Black Book value (if known)<input name="black_book" inputmode="decimal" value="${v('black_book')}"></label>
+          <label>Overall condition*<select name="condition">${['Excellent', 'Good', 'Fair', 'Poor', 'Not running'].map((c) => `<option ${sel('condition', c, 'Fair')}>${c}</option>`).join('')}</select></label>
+        </div>
+        <label style="margin-top:14px;display:flex">Notes about the condition<textarea name="description" rows="3">${v('description')}</textarea></label>
+      </section>
+      <section class="set-group"><h2>Photos and documents <span class="pill">Optional</span></h2>
+        <p class="muted">Add any photos or documents the customer sent you. You can also order without them.</p>
+        <div class="set-grid">${UPLOAD_GROUPS.map((g) => `<label>${esc(g.label)}<input type="file" name="${g.key}" multiple accept="image/*,application/pdf"></label>`).join('')}</div>
+      </section>
+      <div class="set-actions"><button type="submit">Create order</button></div>
+    </form>`);
+}
+
+app.get('/admin/new', (req, res) => res.send(newOrderPage()));
+
+app.post('/admin/new', (req, res) => {
+  receiveUploads(req, res, async (upErr) => {
+    const b = req.body || {};
+    if (upErr) return res.status(400).send(newOrderPage('Files: ' + upErr.message, b));
+    const missing = ['name', 'email', 'phone', 'address', 'city', 'postal', 'vin', 'year', 'make', 'model', 'odometer', 'purchase_price', 'sale_date'].filter((k) => !String(b[k] || '').trim());
+    if (missing.length) return res.status(400).send(newOrderPage('Please fill in: ' + missing.join(', '), b));
+    const { name, email, payment_status, send_instructions, ...rest } = b;
+    const data = { ...rest, vin: String(rest.vin).toUpperCase().replace(/\s/g, ''), province: 'BC', issues: [], payment_method: 'etransfer', source: 'admin' };
+    if (data.registered !== 'yes') { delete data.registered_date; delete data.pst_paid; }
+    for (const k of ['odometer', 'purchase_price', 'black_book', 'pst_paid']) {
+      if (data[k] === undefined || String(data[k]).trim() === '') { delete data[k]; continue; }
+      const n = toNumber(data[k]);
+      if (!(n >= 0)) return res.status(400).send(newOrderPage(`Please enter the ${k.replace('_', ' ')} as a number.`, b));
+      data[k] = String(n);
+    }
+    const files = req.files || {};
+    const photos = UPLOAD_GROUPS.flatMap((g) => (files[g.key] || []).map((f) => ({ file: f.filename, group: g.key, name: f.originalname, pdf: f.mimetype === 'application/pdf' })));
+    const sub = db.create({ name: name.trim(), email: email.trim(), data, photos });
+    if (payment_status === 'received') {
+      db.markPaid(sub.ref);
+    } else if (send_instructions) {
+      const etEmail = process.env.ETRANSFER_EMAIL || 'support@pstappraisal.ca';
+      const company = process.env.COMPANY_NAME || 'PST Appraisal BC';
+      const amount = etransferAmount();
+      const lines = [
+        `Hi ${sub.name},`, '',
+        `Thanks for ordering your FIN 320 appraisal for the ${vehicle(data)}.`, '',
+        `To pay, please send an Interac e-Transfer of ${amount} to ${etEmail}.`,
+        `In the message, include your order number: ${sub.ref}.`, '',
+        'As soon as it arrives, we\'ll complete your appraisal and email you the signed FIN 320' + (data.registered === 'yes' ? ' and the FIN 355/MV refund application.' : '.'), '',
+        `Questions? Reply to this email or call ${process.env.COMPANY_PHONE || '604.635.3867'}.`, '', 'Thank you,', company,
+      ];
+      try {
+        await sendMail({ to: sub.email, subject: `Payment for your appraisal ${sub.ref}: ${amount} by e-Transfer`, text: lines.join('\n'),
+          html: lines.map((l) => (l ? `<p>${esc(l).replace(esc(amount), `<b>${esc(amount)}</b>`).replace(esc(etEmail), `<b>${esc(etEmail)}</b>`).replace(esc(sub.ref), `<b>${esc(sub.ref)}</b>`)}</p>` : '')).join('') }, `etransfer-${sub.ref}`);
+      } catch (e) {
+        console.error('[etransfer email]', e.message);
+        return res.redirect(`/admin/sub/${sub.id}?err=${encodeURIComponent('Order created, but the e-Transfer email failed: ' + e.message)}`);
+      }
+    }
+    res.redirect(payment_status === 'received' ? `/admin/sub/${sub.id}` : `/admin?status=awaiting_payment&created=${sub.ref}`);
+  });
 });
 
 app.post('/admin/sub/:id/approve', async (req, res) => {

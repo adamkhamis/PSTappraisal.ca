@@ -460,3 +460,9 @@ small .badge, td .badge { display:inline-block; margin-top:4px; }
 .vin-status { font-weight:400; font-size:.86rem; color:var(--muted); }
 .vin-status.ok { color:var(--save); font-weight:600; }
 .vin-status.bad { color:#b3261e; }
+.badge.etransfer { background:#fff3d1; color:#7a5a00; }
+.new-order .chk { justify-content:center; }
+.new-order .chk span { display:flex; gap:8px; align-items:center; font-weight:600; }
+.new-order .chk input { width:auto; }
+.new-order textarea { width:100%; }
+.inline-approve button[type=submit] { white-space:nowrap; }
