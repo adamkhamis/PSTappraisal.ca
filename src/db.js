@@ -47,9 +47,9 @@ module.exports = {
     return copy(r);
   },
   // Admin edits: replaces the customer, details and file list; status and payment are left as they are.
-  update(id, { name, email, data, photos }) {
+  update(id, changes) {
     const r = rows.find((x) => x.id === Number(id));
-    if (r) { Object.assign(r, { name, email, data, photos }); save(); }
+    if (r) { Object.assign(r, changes); save(); }
   },
   markCompleted(id, value, notes, finCondition) {
     const r = rows.find((x) => x.id === id);

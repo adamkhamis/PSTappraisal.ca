@@ -515,7 +515,10 @@ app.post('/admin/sub/:id/edit', (req, res) => {
     for (const f of removeSet) { // delete removed files from disk; only names that belonged to this order
       if (s.photos.some((p) => (typeof p === 'string' ? p : p.file) === f)) fs.rm(path.join(UPLOADS, path.basename(f)), () => {});
     }
-    db.update(s.id, { name: name.trim(), email: email.trim(), data: cleaned.data, photos: kept.concat(uploadedFiles(req.files || {})) });
+    const changes = { name: name.trim(), email: email.trim(), data: cleaned.data, photos: kept.concat(uploadedFiles(req.files || {})) };
+    // Changing the condition here also resets the FIN 320 Good/Fair/Poor box to match it.
+    if (cleaned.data.condition !== s.data.condition) changes.fin_condition = null;
+    db.update(s.id, changes);
     res.redirect(`/admin/sub/${s.id}?saved=1`);
   });
 });
@@ -532,6 +535,8 @@ app.post('/admin/sub/:id/approve', async (req, res) => {
     console.error(e);
     return res.status(500).send(layout('Error', `<p class="warn">Email failed: ${esc(e.message)}</p><p><a href="/admin/sub/${s.id}">Back</a></p>`));
   }
+  // Choosing Good/Fair/Poor for the FIN 320 also updates the order's condition, so the two never disagree.
+  if (req.body.condition && FIN_CONDITION[s.data.condition] !== req.body.condition) db.update(s.id, { data: { ...s.data, condition: req.body.condition } });
   db.markCompleted(s.id, value, notes, req.body.condition);
   res.redirect(`/admin?sent=${s.ref}`);
 });
