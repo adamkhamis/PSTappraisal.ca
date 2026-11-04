@@ -47,6 +47,25 @@ async function notifyNewOrder(sub) {
   await Promise.all(jobs);
 }
 
+// An order was saved but Stripe checkout couldn't be opened. Tells you so you can follow up with the customer.
+async function notifyPaymentProblem(sub, err) {
+  const d = sub.data;
+  const vehicle = [d.year, d.make, d.model].filter(Boolean).join(' ');
+  const reason = [err.type, err.code, err.message].filter(Boolean).join(' · ');
+  const jobs = [];
+  if (process.env.NOTIFY_EMAIL) {
+    jobs.push(sendMail({
+      to: process.env.NOTIFY_EMAIL,
+      subject: `Payment didn't start for ${sub.ref}: ${sub.name}`,
+      text: `${sub.name} (${sub.email}, ${d.phone}) filled in the order form for a ${vehicle}, but the Stripe payment page couldn't be opened.\n\n` +
+        `Reason: ${reason}\n\nThe order is saved under Admin → Awaiting payment: ${BASE_URL()}/admin?status=awaiting_payment\n` +
+        `You may want to contact them. If this keeps happening, check the Stripe key in Admin → Settings.\n`,
+    }, `payment-problem-${sub.ref}`).catch((e) => console.error('[notify] email failed:', e.message)));
+  }
+  jobs.push(sendSms(`Payment didn't start for ${sub.ref} (${sub.name}, ${d.phone}). Check your email.`).catch((e) => console.error('[notify] SMS failed:', e.message)));
+  await Promise.all(jobs);
+}
+
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-module.exports = { notifyNewOrder, sendSms };
+module.exports = { notifyNewOrder, notifyPaymentProblem, sendSms };

@@ -13,7 +13,7 @@ const { renderPage, PAGES, sitemapXml, robotsTxt } = require('./pages');
 const UPLOAD_GROUPS = require('./uploads');
 const { toNumber } = require('./num');
 const { pricing, priceVars } = require('./pricing');
-const { notifyNewOrder } = require('./notify');
+const { notifyNewOrder, notifyPaymentProblem } = require('./notify');
 
 // Marks an order paid and, the first time only, emails and texts you about it.
 function paid(ref) {
@@ -27,7 +27,8 @@ const BASE_URL = (process.env.BASE_URL || `http://localhost:${PORT}`).replace(/\
 let stripeCache = { key: null, client: null };
 function getStripe() {
   const key = process.env.STRIPE_SECRET_KEY || '';
-  if (stripeCache.key !== key) stripeCache = { key, client: key ? require('stripe')(key) : null };
+  // Short timeout so a blocked or slow connection to Stripe fails fast with a clear message.
+  if (stripeCache.key !== key) stripeCache = { key, client: key ? require('stripe')(key, { timeout: 20000, maxNetworkRetries: 1 }) : null };
   return stripeCache.client;
 }
 if (!getStripe()) console.warn('[stripe] No Stripe secret key — TEST MODE: submissions are marked paid without charging.');
@@ -86,7 +87,23 @@ const upload = multer({
 
 const REQUIRED = ['name', 'email', 'phone', 'address', 'city', 'postal', 'vin', 'year', 'make', 'model', 'odometer', 'purchase_price', 'sale_date', 'condition'];
 
-app.post('/api/submit', upload.fields(UPLOAD_GROUPS.map((g) => ({ name: g.key, maxCount: g.max }))), async (req, res) => {
+// Upload errors (file too big, too many files) come back as a message the order form can show.
+const receiveUploads = upload.fields(UPLOAD_GROUPS.map((g) => ({ name: g.key, maxCount: g.max })));
+function uploadsWithMessages(req, res, next) {
+  receiveUploads(req, res, (err) => {
+    if (!err) return next();
+    console.error('[upload]', err.code || '', err.message);
+    const box = UPLOAD_GROUPS.find((g) => g.key === err.field);
+    const msg = {
+      LIMIT_FILE_SIZE: 'One of your files is over 15 MB. Please remove it, or take a new photo and try again.',
+      LIMIT_FILE_COUNT: 'Too many files. Please remove a few and try again.',
+      LIMIT_UNEXPECTED_FILE: box ? `Too many files in "${box.label}" (up to ${box.max}). Please remove some.` : 'One of the files was sent from an unknown box. Please reload the page and try again.',
+    }[err.code] || 'We couldn\'t receive your files. Please try again, or call us at 604.635.3867.';
+    res.status(400).json({ error: msg });
+  });
+}
+
+app.post('/api/submit', uploadsWithMessages, async (req, res) => {
   const b = req.body;
   const missing = REQUIRED.filter((k) => !String(b[k] || '').trim());
   if (missing.length) return res.status(400).json({ error: 'Please fill in: ' + missing.join(', ') });
@@ -141,9 +158,11 @@ app.post('/api/submit', upload.fields(UPLOAD_GROUPS.map((g) => ({ name: g.key, m
     db.setStripeSession(sub.id, session.id);
     res.json({ url: session.url });
   } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: 'Could not start payment. Please try again.' });
+    console.error(`[stripe] ${sub.ref}: could not start checkout:`, e.type || '', e.code || '', e.message);
+    notifyPaymentProblem(sub, e).catch(() => {});
+    res.status(502).json({ error: 'We saved your details but couldn\'t open the payment page. Please try again in a minute, or call us at 604.635.3867 and we\'ll help you finish.' });
   }
+
 });
 
 app.get('/before-or-after', (req, res) => res.redirect(301, '/ways-to-use-it'));

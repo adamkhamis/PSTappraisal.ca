@@ -44,21 +44,26 @@ form.addEventListener('submit', async (e) => {
   if (picked.vehicle.length < 4) return showError('Please add at least 4 vehicle photos: front, back, a side and the odometer.');
   const btn = form.querySelector('button[type=submit]');
   const label = btn.innerHTML;
-  btn.disabled = true; btn.textContent = 'Uploading files…';
+  const status = (t) => { btn.textContent = t; };
+  btn.disabled = true;
   try {
+    status('Preparing photos…');
     const body = new FormData(form);
-    for (const [key, files] of Object.entries(picked)) { body.delete(key); files.forEach((f) => body.append(key, f)); }
+    for (const [key, files] of Object.entries(picked)) {
+      body.delete(key);
+      for (const f of files) {
+        const out = await shrink(f);
+        body.append(key, out, out === f ? f.name : f.name.replace(/\.[^.]+$/, '') + '.jpg');
+      }
+    }
     if (form.registered.value !== 'yes') { body.delete('registered_date'); body.delete('pst_paid'); }
-    const res = await fetch('/api/submit', { method: 'POST', body });
-    const json = await res.json();
-    if (!res.ok) throw new Error(json.error || 'Something went wrong. Please try again.');
+    const json = await upload(body, (pct) => status(pct < 100 ? `Uploading… ${pct}%` : 'Opening secure payment…'));
     location.href = json.url;
   } catch (ex) {
     showError(ex.message);
     btn.disabled = false; btn.innerHTML = label;
   }
 });
-
 if (location.search.includes('cancelled')) showError("Payment was cancelled. Your details are saved, so you can try again.");
 
 // VIN lookup: once 17 valid characters are typed, fill in year, make, model and trim from NHTSA's free
@@ -97,3 +102,40 @@ async function lookUpVin() {
 }
 vinInput.addEventListener('input', lookUpVin);
 lookUpVin();
+
+// Phone photos are often 3–8 MB each. Resize to at most 2000 px and re-save as JPEG (usually under 0.5 MB)
+// so the upload is quick on mobile data. PDFs, small images and anything the browser can't read are sent as-is.
+async function shrink(file) {
+  if (!file.type.startsWith('image/') || file.size < 600 * 1024) return file;
+  try {
+    const bmp = await createImageBitmap(file, { imageOrientation: 'from-image' });
+    const scale = Math.min(1, 2000 / Math.max(bmp.width, bmp.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(bmp.width * scale); canvas.height = Math.round(bmp.height * scale);
+    canvas.getContext('2d').drawImage(bmp, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise((r) => canvas.toBlob(r, 'image/jpeg', 0.82));
+    return blob && blob.size < file.size ? blob : file;
+  } catch { return file; }
+}
+
+// Sends the order with upload progress, and gives up with a clear message instead of spinning forever.
+function upload(body, onProgress) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', '/api/submit');
+    xhr.timeout = 4 * 60 * 1000;
+    xhr.upload.onprogress = (e) => { if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100)); };
+    xhr.upload.onload = () => onProgress(100);
+    xhr.onload = () => {
+      let json = {};
+      try { json = JSON.parse(xhr.responseText); } catch {}
+      if (xhr.status >= 200 && xhr.status < 300 && json.url) return resolve(json);
+      if (xhr.status === 413) return reject(new Error('Your photos are too large to upload together. Try removing a few, or call us at 604.635.3867.'));
+      reject(new Error(json.error || `Something went wrong (error ${xhr.status}). Please try again, or call us at 604.635.3867.`));
+    };
+    const fail = (msg) => () => reject(new Error(msg));
+    xhr.onerror = fail('The connection dropped while sending your order. Please check your internet and try again.');
+    xhr.ontimeout = fail('This is taking too long. Your connection may be slow. Please try again on Wi-Fi, or call us at 604.635.3867.');
+    xhr.send(body);
+  });
+}
