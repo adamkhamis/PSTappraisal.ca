@@ -227,7 +227,7 @@ function approveForm(sub, compact) {
      onsubmit="return confirmSend(this, ${toNumber(d.purchase_price) || 0})">
     <label>Appraised value ($)<input name="value" type="text" inputmode="decimal" required value="${esc(value)}"></label>
     ${compact ? '' : `<label>Condition on FIN 320<select name="condition">${['Good', 'Fair', 'Poor'].map((c) => `<option ${c === (sub.fin_condition || FIN_CONDITION[d.condition]) ? 'selected' : ''}>${c}</option>`).join('')}</select></label>
-    <label>Appraiser comments (printed on the FIN 320 and certificate)<textarea name="notes" rows="3">${esc(sub.appraiser_notes || '')}</textarea></label>`}
+    <label>Appraiser comments (printed on the FIN 320 and certificate)<textarea name="notes" rows="6">${esc(sub.appraiser_notes || d.description || '')}</textarea><small>Printed in Part 4 of the FIN 320. Starts with the condition notes from the order; edit as needed.</small></label>`}
     <div class="btns">
       ${compact ? '' : `<button formaction="/admin/sub/${sub.id}/preview" formtarget="_blank" formnovalidate class="secondary" type="submit">Preview PDF</button>`}
       <button type="submit">${sub.status === 'completed' ? 'Re-send' : 'Approve & email'}</button>

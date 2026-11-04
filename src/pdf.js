@@ -216,12 +216,39 @@ async function addSignature(doc, page, rect) {
   page.node.addAnnot(annot);
 }
 
+// Picks the largest font size (10 pt down to 5 pt) at which the text wraps inside the field, so long
+// comments shrink instead of being cut off.
+async function fitTextToBox(doc, field, text) {
+  if (!text) return;
+  const font = await doc.embedFont(StandardFonts.Helvetica);
+  const rect = field.acroField.getWidgets()[0].getRectangle();
+  const width = rect.width - 6, height = rect.height - 4;
+  for (let size = 10; size >= 5; size -= 0.5) {
+    let lines = 0;
+    for (const para of text.split('\n')) {
+      let line = '';
+      for (const word of para.split(/\s+/)) {
+        const test = line ? line + ' ' + word : word;
+        if (font.widthOfTextAtSize(test, size) > width && line) { lines++; line = word; } else line = test;
+      }
+      lines++;
+    }
+    if (lines * size * 1.18 <= height || size === 5) {
+      field.setFontSize(size);
+      field.updateAppearances(font);
+      return;
+    }
+  }
+}
+
 async function buildFin320(sub, value, notes, condition) {
   const doc = await loadForm('official-form.pdf');
   if (!doc) return null;
   const d = sub.data, c = company(), today = ymd(new Date().toLocaleDateString('en-CA'));
   const issues = [].concat(d.issues || []).filter(Boolean);
-  const comments = [notes, issues.length ? 'Reported: ' + issues.join(', ') + '.' : ''].filter(Boolean).join(' ');
+  // Part 4: your appraiser comments, or the condition notes from the order if you left the comments empty.
+  const written = String(notes || '').trim() || String(d.description || '').trim();
+  const comments = [written, issues.length ? 'Reported: ' + issues.join(', ') + '.' : ''].filter(Boolean).join(' ');
   const form = doc.getForm();
   fill(form, {
     'txtDealer/AppraiserName': c.business, txtDealerNumber: c.dealerNumber, txtBusinessNumber: c.businessNumber, txtPSTNumber: c.pstNumber,
@@ -242,6 +269,7 @@ async function buildFin320(sub, value, notes, condition) {
     field.dict.set(PDFName.of('V'), on);
     for (const w of field.getWidgets()) w.setAppearanceState(String(w.getOnValue()) === '/' + box ? on : PDFName.of('Off'));
   }
+  await fitTextToBox(doc, form.getTextField('txtAppraiserComments'), comments);
   await addSignature(doc, doc.getPages()[0], { x: 40, y: 20, w: 200, h: 30 });
   return save(doc);
 }
